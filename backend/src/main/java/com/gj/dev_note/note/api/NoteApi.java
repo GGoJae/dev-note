@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-@RequestMapping("/notes")
+@RequestMapping("/api/notes")
 @RestController
 @RequiredArgsConstructor
 public class NoteApi {

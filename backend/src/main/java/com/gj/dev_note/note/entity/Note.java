@@ -13,12 +13,19 @@ public class Note {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Setter
     @Column(nullable = false)
     private String title;
+
     @Setter
     @Column(nullable = false)
     private String content;
+
+    @Setter
+    @Column(nullable = false)
+    private long viewCount = 0;
+
     @Column(nullable = false)
     private final Instant createdAt = Instant.now();
 
@@ -45,7 +52,8 @@ public class Note {
             return new Note(
                     null,
                     this.title,
-                    this.content
+                    this.content,
+                    0
             );
         }
     }
