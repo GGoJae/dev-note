@@ -1,7 +1,7 @@
 package com.gj.dev_note.note.service;
 
 import com.gj.dev_note.note.common.PageEnvelope;
-import com.gj.dev_note.note.entity.Note;
+import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
 import com.gj.dev_note.note.repository.NoteRepo;
 import com.gj.dev_note.note.request.CreateNote;

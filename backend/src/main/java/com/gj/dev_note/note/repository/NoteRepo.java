@@ -1,6 +1,6 @@
 package com.gj.dev_note.note.repository;
 
-import com.gj.dev_note.note.entity.Note;
+import com.gj.dev_note.note.domain.Note;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

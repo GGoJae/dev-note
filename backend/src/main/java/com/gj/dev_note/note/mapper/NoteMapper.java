@@ -1,6 +1,6 @@
 package com.gj.dev_note.note.mapper;
 
-import com.gj.dev_note.note.entity.Note;
+import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.response.NoteResponse;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
