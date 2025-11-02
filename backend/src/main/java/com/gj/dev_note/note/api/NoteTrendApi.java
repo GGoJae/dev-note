@@ -23,7 +23,7 @@ public class NoteTrendApi {
     }
 
     @GetMapping("/7d")
-    public List<TrendingNoteResponse> top7d(@RequestParam(defaultValue = "10") int limit) {
+    public List<TrendingNoteResponse> top7d(@RequestParam(defaultValue = "3") int limit) {
         return trendService.top7dWithNotes(limit);
     }
 }

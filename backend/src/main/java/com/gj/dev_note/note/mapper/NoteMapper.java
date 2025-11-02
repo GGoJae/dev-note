@@ -2,8 +2,11 @@ package com.gj.dev_note.note.mapper;
 
 import com.gj.dev_note.note.entity.Note;
 import com.gj.dev_note.note.response.NoteResponse;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
-public abstract class NoteMapper {
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class NoteMapper {
 
     public static NoteResponse repoToResponse(Note note) {
         return new NoteResponse(

@@ -18,32 +18,14 @@ public class NoteViewService {
 
     private final StringRedisTemplate redis;
     private final NoteRepo repo;
+    private final NoteTrendWriteService trendWriter;
 
-    private static final String VIEW_KEY_PREFIX = "note:view:";
     private static final int HOURS_BUCKET_TTL_HOURS = 26;
     private static final int DAYS_BUCKET_TTL_DAYS = 8;
 
     public void increaseView(Long noteId) {
-        var viewKey = TrendKeys.viewKey(noteId);
-        redis.opsForValue().increment(viewKey);
-
-        var now = Instant.now();
-        var member = Long.toString(noteId);
-        var hourKey = TrendKeys.hourKey(now);
-        var dayKey = TrendKeys.dayKey(now);
-
-        ZSetOperations<String, String> z = redis.opsForZSet();
-        z.incrementScore(hourKey, member, 1.0);
-        z.incrementScore(dayKey, member, 1.0);
-
-        Long hTtl = redis.getExpire(hourKey);
-        if (hTtl == -1) {
-            redis.expire(hourKey, Duration.ofHours(HOURS_BUCKET_TTL_HOURS));
-        }
-        Long dTtl = redis.getExpire(dayKey);
-        if (dTtl == -1) {
-            redis.expire(dayKey, Duration.ofDays(DAYS_BUCKET_TTL_DAYS));
-        }
+        redis.opsForValue().increment(TrendKeys.viewKey(noteId));
+        trendWriter.recordView(noteId, Instant.now());
     }
 
     public long currentTotalViews(Long noteId) {

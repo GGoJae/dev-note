@@ -1,4 +1,4 @@
-package com.gj.dev_note.note.service;
+package com.gj.dev_note.note.schedule;
 
 import com.gj.dev_note.note.repository.NoteRepo;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NoteFlushService {
+public class NoteFlushSchedule {
 
     private final StringRedisTemplate redis;
     private final NoteRepo repo;
