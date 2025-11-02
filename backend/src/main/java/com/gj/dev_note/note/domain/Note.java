@@ -1,6 +1,7 @@
 package com.gj.dev_note.note.domain;
 
 import com.gj.dev_note.category.domain.Category;
+import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.tag.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,6 +25,10 @@ public class Note {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private Member owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")

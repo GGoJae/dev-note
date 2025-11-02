@@ -4,9 +4,12 @@ import com.gj.dev_note.note.request.CreateNote;
 import com.gj.dev_note.note.request.UpdateNote;
 import com.gj.dev_note.note.response.NoteResponse;
 import com.gj.dev_note.note.service.NoteService;
+import com.gj.dev_note.security.CurrentUser;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/api/notes")
@@ -26,8 +29,9 @@ public class NoteApi {
     }
 
     @PostMapping
-    public NoteResponse createNote(CreateNote createNote) {
-        return service.createNote(createNote);
+    public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody CreateNote req) {
+        var saved = service.createNote(CurrentUser.id(), req);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")

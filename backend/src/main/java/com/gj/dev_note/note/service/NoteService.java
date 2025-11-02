@@ -1,9 +1,11 @@
 package com.gj.dev_note.note.service;
 
+import com.gj.dev_note.member.domain.Member;
+import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.note.common.PageEnvelope;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
-import com.gj.dev_note.note.repository.NoteRepo;
+import com.gj.dev_note.note.repository.NoteRepository;
 import com.gj.dev_note.note.request.CreateNote;
 import com.gj.dev_note.note.request.UpdateNote;
 import com.gj.dev_note.note.response.NoteResponse;
@@ -23,8 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class NoteService {
-    private final NoteRepo repo;
+    private final NoteRepository repo;
     private final CacheManager cacheManager;
+    private final MemberRepository memberRepo;
 
     public boolean existsById(Long id) {
         return repo.existsById(id);
@@ -70,10 +73,12 @@ public class NoteService {
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
-    public NoteResponse createNote(CreateNote createNote) {
+    public NoteResponse createNote(Long ownerId,CreateNote createNote) {
+        var ownerRef = memberRepo.getReferenceById(ownerId);
         Note newNote = Note.builder()
                 .title(createNote.title())
                 .content(createNote.content())
+                .owner(ownerRef)
                 .build();
         Note save = repo.save(newNote);
         log.debug("저장된 노트 : {} ", save);

@@ -1,14 +1,12 @@
 package com.gj.dev_note.note.service;
 
-import com.gj.dev_note.note.repository.NoteRepo;
+import com.gj.dev_note.note.repository.NoteRepository;
 import com.gj.dev_note.note.trend.TrendKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
 
 @Service
@@ -17,7 +15,7 @@ import java.time.Instant;
 public class NoteViewService {
 
     private final StringRedisTemplate redis;
-    private final NoteRepo repo;
+    private final NoteRepository repo;
     private final NoteTrendWriteService trendWriter;
 
     private static final int HOURS_BUCKET_TTL_HOURS = 26;

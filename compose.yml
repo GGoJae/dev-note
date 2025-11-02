@@ -50,6 +50,7 @@ services:
       # Redis
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
     ports: ["8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }

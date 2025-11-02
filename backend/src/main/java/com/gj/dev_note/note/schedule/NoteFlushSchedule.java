@@ -1,6 +1,6 @@
 package com.gj.dev_note.note.schedule;
 
-import com.gj.dev_note.note.repository.NoteRepo;
+import com.gj.dev_note.note.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.DataType;
@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 public class NoteFlushSchedule {
 
     private final StringRedisTemplate redis;
-    private final NoteRepo repo;
+    private final NoteRepository repo;
 
     private static final String VIEW_KEY_PREFIX = "note:view:";
 

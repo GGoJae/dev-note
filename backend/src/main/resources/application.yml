@@ -1,9 +1,18 @@
 server:
   port: 8080
 
+jwt:
+  issuer: "dev-note"
+  expiration-seconds: 36000
+
 spring:
   application:
     name: dev-note
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appdb}
