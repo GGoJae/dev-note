@@ -4,12 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "artifact_variant",
-        uniqueConstraints = @UniqueConstraint(name = "uk_variant_group_code", columnNames = {"group_id","variantCode"}),
-        indexes = {
-                @Index(name = "idx_variant_group", columnList = "group_id"),
-                @Index(name = "idx_variant_order", columnList = "displayOrder")
-        })
+@Table(name="artifact_variant",
+        indexes = @Index(name="idx_art_variant_group", columnList = "group_id")
+)
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -19,16 +16,17 @@ public class ArtifactVariant {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="group_id", nullable=false)
     private ArtifactGroup group;
 
-    @Column(nullable = false, length = 40)
-    private String variantCode;
+    @Column(nullable=false, length=80)
+    private String variantKey;
 
-    @Column(nullable = false, length = 120) //  UI 표기
-    private String label;
+    @Column(length=200)
+    private String title;
 
-    @Column(nullable = false)
-    private int displayOrder;
+    @Column(nullable=false)
+    @Builder.Default
+    private int displayOrder = 0;
 }

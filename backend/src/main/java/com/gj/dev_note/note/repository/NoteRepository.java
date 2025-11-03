@@ -1,6 +1,9 @@
 package com.gj.dev_note.note.repository;
 
 import com.gj.dev_note.note.domain.Note;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,4 +16,6 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     int increaseViewCount(@Param("id") Long id, @Param("delta") long delta);
 
     boolean existsByIdAndOwnerId(Long id, Long ownerId);
+
+    Page<Note> findAll(Specification<Note> spec, Pageable pageReq);
 }

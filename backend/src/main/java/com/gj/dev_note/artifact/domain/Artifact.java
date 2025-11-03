@@ -7,14 +7,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name = "artifact",
-        uniqueConstraints = @UniqueConstraint(name = "uk_artifact_variant_logical", columnNames = {"variant_id","logicalKey"}),
+@Table(name="artifact",
         indexes = {
-                @Index(name = "idx_artifact_variant", columnList = "variant_id"),
-                @Index(name = "idx_artifact_kind", columnList = "kind"),
-                @Index(name = "idx_artifact_role", columnList = "role"),
-                @Index(name = "idx_artifact_order", columnList = "displayOrder")
-        })
+                @Index(name="idx_art_variant", columnList = "variant_id"),
+                @Index(name="idx_art_kind", columnList = "kind"),
+                @Index(name="idx_art_role", columnList = "role")
+        }
+)
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
@@ -27,41 +26,36 @@ public class Artifact {
     @JoinColumn(name = "variant_id", nullable = false)
     private ArtifactVariant variant;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private ArtifactKind kind;
+    @Column(nullable=false, length=40)
+    private String kind;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private ArtifactRole role;
+    @Column(length=40)
+    private String role;
 
-    @Column(length = 60)
-    private String language;
+    @Column(columnDefinition = "text")
+    private String metaJson;
 
-    @Column(nullable = false, length = 160)
-    private String logicalKey;
+    @Lob @Column(columnDefinition = "text")
+    private String content;
 
-    @Column(length = 200)
+    @Column(length=300)
+    private String contentUrl;
+
+    @Column(length=120)
     private String filename;
 
-    @Column(length = 300)
-    private String path;
+    @Column(length=40)
+    private String language;
 
-    @Lob
-    @Column(columnDefinition = "text")
-    private String contentText;     // 컨텐트 소용량
+    @Column(length=100)
+    private String mimeType;
 
-    @Column(length = 500)
-    private String contentUrl;      // 대용량  나중에 s3 고려
+    private Long sizeBytes;
 
-    private Long size;
-    @Column(length = 80)
+    @Column(length=64)
     private String sha256;
 
-    @Column(nullable = false)
-    private int displayOrder;
-
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(nullable=false, updatable=false)
     private Instant createdAt;
 }

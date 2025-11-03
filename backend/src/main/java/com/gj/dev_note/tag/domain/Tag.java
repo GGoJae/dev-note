@@ -7,9 +7,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
-@Table(name = "tag",
-        uniqueConstraints = @UniqueConstraint(name = "uk_tag_slug", columnNames = "slug"),
-        indexes = @Index(name = "idx_tag_slug", columnList = "slug"))
+@Entity
+@Table(name="tag",
+        indexes = {
+                @Index(name="idx_tag_slug", columnList = "slug", unique = true)
+        }
+)
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
@@ -18,17 +21,19 @@ public class Tag {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 80)
+    @Column(nullable = false, length = 120)
     private String name;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 140, unique = true)
     private String slug;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @UpdateTimestamp
     @Column(nullable = false)
-    private Instant updatedAt;
+    @Builder.Default
+    private Long usageCount = 0L;
+
+    @PrePersist @PreUpdate
+    void normalize() {
+        if (slug != null) slug = slug.trim().toLowerCase();
+        if (name != null) name = name.trim();
+    }
 }

@@ -5,12 +5,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "note_quiz_map",
-        uniqueConstraints = @UniqueConstraint(name = "uk_note_quiz", columnNames = {"note_id", "quiz_id"}),
+@Table(name="note_quiz_map",
+        uniqueConstraints = @UniqueConstraint(name="uk_note_quiz", columnNames = {"note_id","quiz_id"}),
         indexes = {
-                @Index(name = "idx_note_quiz_note", columnList = "note_id"),
-                @Index(name = "idx_note_quiz_quiz", columnList = "quiz_id")
-        })
+                @Index(name="idx_nqm_note", columnList = "note_id"),
+                @Index(name="idx_nqm_quiz", columnList = "quiz_id")
+        }
+)
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
@@ -27,12 +28,11 @@ public class NoteQuizMap {
         @JoinColumn(name = "quiz_id", nullable = false)
         private Quiz quiz;
 
-        @Column(nullable = false)
-        private int displayOrder;
+        @Column(nullable=false)
+        @Builder.Default
+        private int displayOrder = 0;
 
-        @Column(nullable = false)
-        private double weight;          // 추천 비중 0 ~ 1
-
-        @Column(length = 40)
-        private String relationType;
+        @Column(nullable=false)
+        @Builder.Default
+        private double relevance = 1.0;
 }

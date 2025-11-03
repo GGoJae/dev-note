@@ -4,13 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "note_link",
-        uniqueConstraints = @UniqueConstraint(name = "uk_note_link", columnNames = {"src_id", "dst_id", "type"}),
+@Table(name="note_link",
+        uniqueConstraints = @UniqueConstraint(name="uk_note_link", columnNames = {"src_id","dst_id","type"}),
         indexes = {
-            @Index(name = "idx_note_link_src", columnList = "src_id"),
-                @Index(name = "idx_note_link_dst", columnList = "dst_id"),
-                @Index(name = "idx_note_link_type", columnList = "type")
-        })
+                @Index(name="idx_note_link_src", columnList = "src_id"),
+                @Index(name="idx_note_link_dst", columnList = "dst_id")
+        }
+)
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
@@ -31,6 +31,7 @@ public class NoteLink {
     @Column(nullable = false, length = 40)
     private NoteLinkType type;
 
-    @Column(nullable = false)
-    private double weight;  // 0 ~ 1 추천 강도 등
+    @Column(nullable=false)
+    @Builder.Default
+    private double weight = 1.0;
 }
