@@ -2,14 +2,13 @@ package com.gj.dev_note.note.api;
 
 import com.gj.dev_note.note.common.PageEnvelope;
 import com.gj.dev_note.note.query.NoteQuery;
+import com.gj.dev_note.note.request.NoteSearchRequest;
 import com.gj.dev_note.note.response.NoteResponse;
 import com.gj.dev_note.note.service.NoteReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 
 @RestController
@@ -20,11 +19,11 @@ public class NoteSearchApi {
     private final NoteReadService service;
 
     public PageEnvelope<NoteResponse> search(
-            @RequestParam NoteQuery query,
+            @ModelAttribute NoteSearchRequest req,
             Pageable pageable,
-            @RequestHeader(name = "X-Viewer-Id", required = false) Long viewerId
+            @AuthenticationPrincipal(expression="id") Long viewerId
     ) {
-        return service.search(query, pageable);
+        return service.search(req.toQuery(viewerId), pageable);
     }
 
 

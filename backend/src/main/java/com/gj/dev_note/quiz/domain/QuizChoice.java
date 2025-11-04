@@ -2,7 +2,6 @@ package com.gj.dev_note.quiz.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
 
 @Entity
 @Table(name="quiz_choice",

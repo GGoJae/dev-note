@@ -31,7 +31,7 @@ public class AuthService {
         }
         Member m = Member.builder()
                 .email(req.email())
-                .password(passwordEncoder.encode(req.password()))
+                .passwordHash(passwordEncoder.encode(req.password()))
                 .nickname(req.nickname())
                 .roles(Set.of(Role.USER))
                 .build();
@@ -43,7 +43,7 @@ public class AuthService {
         Member m = memberRepo.findByEmail(req.email())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
 
-        if (!passwordEncoder.matches(req.password(), m.getPassword())) {
+        if (!passwordEncoder.matches(req.password(), m.getPasswordHash())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않음");
         }
 

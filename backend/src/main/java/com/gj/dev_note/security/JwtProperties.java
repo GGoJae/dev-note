@@ -11,6 +11,6 @@ public class JwtProperties {
     @Value("${jwt.expiration-seconds:36000}")
     public long expirationSeconds;
 
-    @Value("${JWT_SECRET}")
+    @Value("${JWT_SECRET:change-me}")
     public String secret;
 }

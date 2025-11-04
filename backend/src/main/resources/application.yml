@@ -4,6 +4,7 @@ server:
 jwt:
   issuer: "dev-note"
   expiration-seconds: 36000
+  secret: ${JWT_SECRET:change-me}
 
 spring:
   application:
@@ -12,7 +13,6 @@ spring:
   security:
     oauth2:
       resourceserver:
-        jwt:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appdb}
@@ -22,7 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update   # dev에서만 사용
+      ddl-auto: create   # dev에서만 사용
     properties:
       hibernate:
         format_sql: true
