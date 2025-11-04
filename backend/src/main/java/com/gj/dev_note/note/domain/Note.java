@@ -3,6 +3,7 @@ package com.gj.dev_note.note.domain;
 import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.member.domain.Member;
+import com.gj.dev_note.tag.domain.NoteTagMap;
 import com.gj.dev_note.tag.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,7 +19,8 @@ import java.util.Set;
         indexes = {
                 @Index(name="idx_note_owner", columnList = "owner_id"),
                 @Index(name="idx_note_category", columnList = "category_id"),
-                @Index(name="idx_note_visibility", columnList = "visibility")
+                @Index(name="idx_note_visibility", columnList = "visibility"),
+                @Index(name="idx_note_created_at", columnList="createdAt")
         }
 )
 @Getter @Setter
@@ -53,14 +55,9 @@ public class Note {
     @Builder.Default
     private long viewCount = 0L;
 
-    @ManyToMany
-    @JoinTable(name="note_tag",
-            joinColumns = @JoinColumn(name="note_id"),
-            inverseJoinColumns = @JoinColumn(name="tag_id"),
-            uniqueConstraints = @UniqueConstraint(name="uk_note_tag", columnNames={"note_id","tag_id"})
-    )
+    @OneToMany(mappedBy="note", cascade=CascadeType.ALL, orphanRemoval=true)
     @Builder.Default
-    private Set<Tag> tags = new HashSet<>();
+    private Set<NoteTagMap> tagMaps = new HashSet<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

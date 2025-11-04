@@ -8,10 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name="tag",
-        indexes = {
-                @Index(name="idx_tag_slug", columnList = "slug", unique = true)
-        }
+@Table(name = "tag",
+        indexes = { @Index(name = "idx_tag_slug", columnList = "slug") },
+        uniqueConstraints = { @UniqueConstraint(name = "uk_tag_slug", columnNames = "slug") }
 )
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -27,9 +26,9 @@ public class Tag {
     @Column(nullable = false, length = 140, unique = true)
     private String slug;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Long usageCount = 0L;
+    @CreationTimestamp
+    @Column(nullable=false, updatable=false)
+    private Instant createdAt;
 
     @PrePersist @PreUpdate
     void normalize() {
