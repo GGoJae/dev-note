@@ -4,7 +4,6 @@ import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.tag.domain.NoteTagMap;
-import com.gj.dev_note.tag.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

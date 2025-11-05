@@ -1,7 +1,7 @@
 package com.gj.dev_note.note.api;
 
-import com.gj.dev_note.note.request.CreateNote;
-import com.gj.dev_note.note.request.UpdateNote;
+import com.gj.dev_note.note.request.NoteCreateRequest;
+import com.gj.dev_note.note.request.NoteUpdateRequest;
 import com.gj.dev_note.note.response.NoteResponse;
 import com.gj.dev_note.note.service.NoteService;
 import com.gj.dev_note.security.CurrentUser;
@@ -29,14 +29,14 @@ public class NoteApi {
     }
 
     @PostMapping
-    public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody CreateNote req) {
+    public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody NoteCreateRequest req) {
         var saved = service.createNote(CurrentUser.id(), req);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public NoteResponse updateNote(@PathVariable Long id, UpdateNote updateNote) {
-        return service.updateNote(id, updateNote);
+    public NoteResponse updateNote(@PathVariable Long id, NoteUpdateRequest noteUpdateRequest) {
+        return service.updateNote(id, noteUpdateRequest);
     }
 
     @DeleteMapping("/{id}")

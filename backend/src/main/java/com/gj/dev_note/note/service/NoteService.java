@@ -1,13 +1,12 @@
 package com.gj.dev_note.note.service;
 
-import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.note.common.PageEnvelope;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
 import com.gj.dev_note.note.repository.NoteRepository;
-import com.gj.dev_note.note.request.CreateNote;
-import com.gj.dev_note.note.request.UpdateNote;
+import com.gj.dev_note.note.request.NoteCreateRequest;
+import com.gj.dev_note.note.request.NoteUpdateRequest;
 import com.gj.dev_note.note.response.NoteResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +44,7 @@ public class NoteService {
             e.printStackTrace();
         }
         var page = repo.findAll(pageable)
-                .map(NoteMapper::repoToResponse);
+                .map(NoteMapper::toResponse);
 
         return PageEnvelope.of(page);
     }
@@ -63,17 +62,17 @@ public class NoteService {
         Note note = repo.findById(id).orElseThrow();
 
         if (cache != null) {
-            NoteResponse noteCache = NoteMapper.cacheToResponse(note);
+            NoteResponse noteCache = NoteMapper.toResponse(note);
             log.debug("캐시에 노트 저장, caching 필드를 true 인 상태로 저장 , {}", noteCache);
             cache.put(id, noteCache);
         }
 
-        return NoteMapper.repoToResponse(note);
+        return NoteMapper.toResponse(note);
     }
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
-    public NoteResponse createNote(Long ownerId,CreateNote createNote) {
+    public NoteResponse createNote(Long ownerId, NoteCreateRequest createNote) {
         var ownerRef = memberRepo.getReferenceById(ownerId);
         Note newNote = Note.builder()
                 .title(createNote.title())
@@ -86,27 +85,27 @@ public class NoteService {
         Cache cache = cacheManager.getCache("noteById");
         if (cache != null) {
             log.debug("캐시에 저장");
-            cache.put(save.getId(), NoteMapper.cacheToResponse(save));
+            cache.put(save.getId(), NoteMapper.toResponse(save));
         }
 
-        return NoteMapper.repoToResponse(save);
+        return NoteMapper.toResponse(save);
     }
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
-    public NoteResponse updateNote(Long id,UpdateNote updateNote) {
+    public NoteResponse updateNote(Long id, NoteUpdateRequest noteUpdateRequest) {
         Note note = repo.findById(id).orElseThrow();
         log.debug("update 전 note: {}",note);
-        note.setTitle(updateNote.title());
-        note.setContent(updateNote.content());
+        note.setTitle(noteUpdateRequest.title());
+        note.setContent(noteUpdateRequest.content());
         log.debug("update 전 note: {}",note);
 
         Cache cache = cacheManager.getCache("noteById");
         if (cache != null) {
             log.debug("캐시에 저장");
-            cache.put(id, NoteMapper.cacheToResponse(note));
+            cache.put(id, NoteMapper.toResponse(note));
         }
-        return NoteMapper.repoToResponse(note);
+        return NoteMapper.toResponse(note);
     }
 
     @Caching(evict = {

@@ -8,23 +8,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NoteMapper {
 
-    public static NoteResponse repoToResponse(Note note) {
+    public static NoteResponse toResponse(Note note) {
         return new NoteResponse(
                 note.getId(),
                 note.getTitle(),
                 note.getContent(),
-                note.getCreatedAt(),
-                false
+                note.getCreatedAt()
         );
     }
 
-    public static NoteResponse cacheToResponse(Note note) {
-        return new NoteResponse(
-                note.getId(),
-                note.getTitle(),
-                note.getContent(),
-                note.getCreatedAt(),
-                true
-        );
-    }
 }

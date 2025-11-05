@@ -13,7 +13,6 @@ import com.gj.dev_note.tag.domain.QTag;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -136,7 +135,7 @@ public class NoteReadServiceQdsl {
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        var dtoList = rows.stream().map(NoteMapper::repoToResponse).toList();
+        var dtoList = rows.stream().map(NoteMapper::toResponse).toList();
         return new PageEnvelope<>(dtoList, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), total);
     }
 

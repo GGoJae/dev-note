@@ -6,6 +6,5 @@ public record NoteResponse(
         Long id,
         String title,
         String content,
-        Instant createdAt,
-        boolean caching
+        Instant createdAt
 ) {}
