@@ -6,10 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -45,7 +42,7 @@ public class NoteTrendService {
     private List<TrendingNoteResponse> attachNotes(List<TrendingItem> items) {
         var out = new ArrayList<TrendingNoteResponse>(items.size());
         for (var it : items) {
-            var note = noteService.getOne(it.id());
+            var note = noteService.getNote(it.id());
             out.add(new TrendingNoteResponse(note, it.score));
         }
         return out;

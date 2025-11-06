@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
@@ -38,34 +39,33 @@ public class NoteService {
             sync = true
     )
     public PageEnvelope<NoteResponse> getList(Pageable pageable) {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         var page = repo.findAll(pageable)
                 .map(NoteMapper::toResponse);
 
         return PageEnvelope.of(page);
     }
 
-    public NoteResponse getOne(Long id) {
-        Cache cache = cacheManager.getCache("noteById");
-        if (cache != null) {
-            NoteResponse cacheHit = cache.get(id, NoteResponse.class);
-            if (cacheHit != null) {
-                return cacheHit;
-            }
-        }
+    @Cacheable(
+            cacheNames = "noteById",
+            key = "'note:'+#id"
+    )
+    public NoteResponse getNote(Long id) {
+        // 캐시 매니저를 사용할 때 수동 버전
+//        Cache cache = cacheManager.getCache("noteById");
+//        if (cache != null) {
+//            NoteResponse cacheHit = cache.get(id, NoteResponse.class);
+//            if (cacheHit != null) {
+//                return cacheHit;
+//            }
+//        }
 
-        // 캐시 미스
         Note note = repo.findById(id).orElseThrow();
 
-        if (cache != null) {
-            NoteResponse noteCache = NoteMapper.toResponse(note);
-            log.debug("캐시에 노트 저장, caching 필드를 true 인 상태로 저장 , {}", noteCache);
-            cache.put(id, noteCache);
-        }
+//        if (cache != null) {
+//            NoteResponse noteCache = NoteMapper.toResponse(note);
+//            log.debug("캐시에 노트 저장, caching 필드를 true 인 상태로 저장 , {}", noteCache);
+//            cache.put(id, noteCache);
+//        }
 
         return NoteMapper.toResponse(note);
     }
@@ -79,16 +79,15 @@ public class NoteService {
                 .content(createNote.content())
                 .owner(ownerRef)
                 .build();
-        Note save = repo.save(newNote);
-        log.debug("저장된 노트 : {} ", save);
+        Note saved = repo.save(newNote);
+        log.debug("저장된 노트 : {} ", saved);
+//        Cache cache = cacheManager.getCache("noteById");
+//        if (cache != null) {
+//            log.debug("캐시에 저장");
+//            cache.put(saved.getId(), NoteMapper.toResponse(saved));
+//        }
 
-        Cache cache = cacheManager.getCache("noteById");
-        if (cache != null) {
-            log.debug("캐시에 저장");
-            cache.put(save.getId(), NoteMapper.toResponse(save));
-        }
-
-        return NoteMapper.toResponse(save);
+        return NoteMapper.toResponse(saved);
     }
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)

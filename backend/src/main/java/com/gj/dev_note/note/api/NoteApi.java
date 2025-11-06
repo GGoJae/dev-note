@@ -25,7 +25,7 @@ public class NoteApi {
 
     @GetMapping("/{id}")
     public NoteResponse getNote(@PathVariable Long id) {
-        return service.getOne(id);
+        return service.getNote(id);
     }
 
     @PostMapping
