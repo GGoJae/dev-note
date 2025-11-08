@@ -3,7 +3,7 @@ package com.gj.dev_note.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.gj.dev_note.common.PageEnvelope;
-import com.gj.dev_note.note.response.NoteResponse;
+import com.gj.dev_note.note.response.NoteDetail;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,13 +44,13 @@ public class CacheConfig {
     }
 
     private static Map<String, RedisCacheConfiguration> getConfigMap(ObjectMapper om, RedisCacheConfiguration defaultCfg) {
-        var noteSer = new Jackson2JsonRedisSerializer<>(om, NoteResponse.class);
+        var noteSer = new Jackson2JsonRedisSerializer<>(om, NoteDetail.class);
         var noteCfg = defaultCfg.serializeValuesWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(noteSer)
         );
 
         var pageType = om.getTypeFactory()
-                .constructParametricType(PageEnvelope.class, NoteResponse.class);
+                .constructParametricType(PageEnvelope.class, NoteDetail.class);
         var pageSer = new Jackson2JsonRedisSerializer<>(om, pageType);
         var pageCfg = defaultCfg.serializeValuesWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(pageSer)

@@ -4,7 +4,7 @@ import com.gj.dev_note.common.PageEnvelope;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
 import com.gj.dev_note.note.query.NoteQuery;
-import com.gj.dev_note.note.response.NoteResponse;
+import com.gj.dev_note.note.response.NoteSummary;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,9 +17,9 @@ import java.util.List;
 public class NoteReadServiceQdsl {
 
     private final JPAQueryFactory qf;
-    private final NoteSearchDsl dsl; // 주입
+    private final NoteSearchDsl dsl;
 
-    public PageEnvelope<NoteResponse> search(NoteQuery q, Pageable pageable) {
+    public PageEnvelope<NoteSummary> search(NoteQuery q, Pageable pageable) {
         var where = dsl.buildWhere(q);
         var orders = dsl.buildOrders(q);
 
@@ -33,8 +33,10 @@ public class NoteReadServiceQdsl {
         if (total == 0L) return new PageEnvelope<>(List.of(), pageable, 0);
 
         // data
-        var dataQuery = qf.select(dsl.note).distinct()
-                .from(dsl.note);
+        var dataQuery = qf.selectFrom(dsl.note)
+                .join(dsl.note.owner(), dsl.owner)
+                .fetchJoin()
+                .distinct();
         if (dsl.needsTagAny(q)) dsl.applyTagAnyJoin(dataQuery, q);
 
         List<Note> rows = dataQuery
@@ -44,7 +46,7 @@ public class NoteReadServiceQdsl {
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        var dtoList = rows.stream().map(NoteMapper::toResponse).toList();
+        var dtoList = rows.stream().map(NoteMapper::toSummary).toList();
         return new PageEnvelope<>(dtoList, pageable, total);
     }
 }

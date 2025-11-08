@@ -61,7 +61,7 @@ public class Note {
 
     @Column(nullable = false)
     @Builder.Default
-    private Instant contentUpdatedAt = Instant.now();
+    private Instant contentUpdatedAt;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -70,6 +70,11 @@ public class Note {
     @UpdateTimestamp
     @Column(nullable = false)
     private Instant updatedAt;
+
+    @PrePersist
+    void initContentUpdatedAt() {
+        if (contentUpdatedAt == null) contentUpdatedAt = Instant.now();
+    }
 
     public void editContent(String title, String content, Set<Tag> tags) {
         this.title =title;

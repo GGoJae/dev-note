@@ -2,6 +2,7 @@ package com.gj.dev_note.note.service;
 
 import com.gj.dev_note.category.service.CategoryTreeService;
 import com.gj.dev_note.common.Visibility;
+import com.gj.dev_note.member.domain.QMember;
 import com.gj.dev_note.note.domain.QNote;
 import com.gj.dev_note.note.query.NoteQuery;
 import com.gj.dev_note.note.query.NoteSorts;
@@ -26,12 +27,12 @@ class NoteSearchDsl {
 
     private final CategoryTreeService categoryTreeService;
 
-    // Q-타입(메서드형 Path를 쓰는 네 규칙에 맞춤)
     final QNote note = QNote.note;
     final QNoteTagMap ntm = QNoteTagMap.noteTagMap;
     final QTag tag = QTag.tag;
     final QNoteTagMap ntm2 = new QNoteTagMap("ntm2"); // 서브쿼리 alias
     final QTag tag2 = new QTag("tag2");
+    final QMember owner = QMember.member;
 
     /** 메인 where 조립 (텍스트/카테고리/스코프/범위 + 태그 ALL) */
     BooleanBuilder buildWhere(NoteQuery q) {
@@ -118,19 +119,16 @@ class NoteSearchDsl {
         return where;
     }
 
-    /** 태그 ANY가 필요한가? */
     boolean needsTagAny(NoteQuery q) {
         return q.hasTags() && q.getTagMode() == NoteQuery.TagMode.ANY;
     }
 
-    /** 태그 ANY 조인을 쿼리에 적용 (count/data 동일하게 호출) */
     void applyTagAnyJoin(JPAQuery<?> query, NoteQuery q) {
         query.join(note.tags, ntm)
                 .join(ntm.tag(), tag)
                 .where(tag.slug.in(q.getTag()));
     }
 
-    /** 정렬 빌드 (마지막에 id 타이브레이커 한 번만) */
     OrderSpecifier<?>[] buildOrders(NoteQuery q) {
         Sort s = NoteSorts.toSort(q.getSortKey(), q.getSortDir());
         List<OrderSpecifier<?>> out = new ArrayList<>();

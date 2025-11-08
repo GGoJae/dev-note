@@ -2,7 +2,8 @@ package com.gj.dev_note.note.api;
 
 import com.gj.dev_note.note.request.NoteCreateRequest;
 import com.gj.dev_note.note.request.NoteUpdateRequest;
-import com.gj.dev_note.note.response.NoteResponse;
+import com.gj.dev_note.note.response.NoteDetail;
+import com.gj.dev_note.note.response.NoteSummary;
 import com.gj.dev_note.note.service.NoteService;
 import com.gj.dev_note.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -19,23 +20,23 @@ public class NoteApi {
     private final NoteService service;
 
     @GetMapping
-    public Page<NoteResponse> noteList(Pageable pageable) {
+    public Page<NoteSummary> noteList(Pageable pageable) {
         return service.getList(pageable);
     }
 
     @GetMapping("/{id}")
-    public NoteResponse getNote(@PathVariable Long id) {
+    public NoteDetail getNote(@PathVariable Long id) {
         return service.getNote(id);
     }
 
     @PostMapping
-    public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody NoteCreateRequest req) {
+    public ResponseEntity<NoteDetail> createNote(@Valid @RequestBody NoteCreateRequest req) {
         var saved = service.createNote(CurrentUser.id(), req);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public NoteResponse updateNote(@PathVariable Long id, NoteUpdateRequest noteUpdateRequest) {
+    public NoteDetail updateNote(@PathVariable Long id, NoteUpdateRequest noteUpdateRequest) {
         return service.updateNote(id, noteUpdateRequest);
     }
 

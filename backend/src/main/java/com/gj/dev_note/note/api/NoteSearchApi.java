@@ -2,7 +2,8 @@ package com.gj.dev_note.note.api;
 
 import com.gj.dev_note.note.query.NoteQuery;
 import com.gj.dev_note.note.request.NoteSearchRequest;
-import com.gj.dev_note.note.response.NoteResponse;
+import com.gj.dev_note.note.response.NoteDetail;
+import com.gj.dev_note.note.response.NoteSummary;
 import com.gj.dev_note.note.service.NoteReadServiceQdsl;
 import com.gj.dev_note.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -23,32 +24,32 @@ public class NoteSearchApi {
     private final NoteReadServiceQdsl service;
 
     @GetMapping("/notes/public")
-    public Page<NoteResponse> searchPublic(@Valid NoteSearchRequest req, Pageable pageable) {
+    public Page<NoteSummary> searchPublic(@Valid NoteSearchRequest req, Pageable pageable) {
         return service.search(NoteQuery.publicOnly(req), pageable);
     }
 
     @GetMapping("/me/notes")
-    public Page<NoteResponse> searchMine(@Valid NoteSearchRequest req, Pageable pageable) {
+    public Page<NoteSummary> searchMine(@Valid NoteSearchRequest req, Pageable pageable) {
         return service.search(NoteQuery.mineOnly(req, CurrentUser.id()), pageable);
     }
 
     @GetMapping("/notes")
-    public Page<NoteResponse> searchMixed(@Valid NoteSearchRequest req, Pageable pageable) {
+    public Page<NoteSummary> searchMixed(@Valid NoteSearchRequest req, Pageable pageable) {
         Long viewerId = CurrentUser.idOpt().orElse(null);
         return service.search(NoteQuery.mineOrPublic(req, viewerId), pageable);
     }
 
     @GetMapping("/users/{ownerId}/notes")
-    public Page<NoteResponse> searchOwnerPublic(@PathVariable long ownerId,
-                                               @Valid NoteSearchRequest req,
-                                                Pageable pageable) {
+    public Page<NoteSummary> searchOwnerPublic(@PathVariable long ownerId,
+                                              @Valid NoteSearchRequest req,
+                                              Pageable pageable) {
         return service.search(NoteQuery.ownerPublic(req, ownerId), pageable);
     }
 
     @GetMapping("/users/{ownerId}/notes/access")
-    public Page<NoteResponse> searchOwnerAccessible(@PathVariable long ownerId,
-                                                   @Valid NoteSearchRequest req,
-                                                    Pageable pageable) {
+    public Page<NoteSummary> searchOwnerAccessible(@PathVariable long ownerId,
+                                                  @Valid NoteSearchRequest req,
+                                                  Pageable pageable) {
         Long viewerId = CurrentUser.idOpt().orElse(null);
         return service.search(NoteQuery.ownerAccessible(req, ownerId, viewerId), pageable);
     }
