@@ -1,28 +1,77 @@
 package com.gj.dev_note.note.query;
 
+import com.gj.dev_note.note.request.NoteSearchRequest;
+import lombok.*;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Set;
 
-public record NoteQuery(
-        String q,                   // 텍스트 검색 (제목/내용)
-        Long categoryId,            // 기준 카테고리
-        boolean includeChildren,    // 하위 카테고리 포함 여부
-        Set<String> tagSlugs,       // 태그 슬러그들
-        TagMode tagMode,            // ANY / ALL
-        VisibilityScope scope,      // PUBLIC_ONLY / MINE_OR_PUBLIC / MINE_ONLY
-        Long viewerId,              // 현재 사용자 id (scope 해석용)
-        Long minViews,              // 조회수 최소
-        Long maxViews,              // 조회수 최대
-        Instant createdFrom,        // 생성일 시작
-        Instant createdTo,          // 생성일 끝(이하)
-        Instant updatedFrom,        // 수정일 시작
-        Instant updatedTo,          // 수정일 끝(이하)
-        String sortKey,             // createdAt, updatedAt, viewCount, title
-        String sortDir              // asc / desc
-) {
-    public enum TagMode { ANY, ALL }
-    public enum VisibilityScope { PUBLIC_ONLY, MINE_OR_PUBLIC, MINE_ONLY }
+@Getter
+@Builder(builderMethodName = "builderInternal", access = AccessLevel.PRIVATE)
+public class NoteQuery {
+    private final String q;
+    private final Long categoryId;
+    private final boolean includeChildren;
+    private final Set<String> tag;
+    private final TagMode tagMode;
+    private final Long viewerId;   // 요청자
+    private final Long ownerId;    // 타겟 소유자
+    private final Long minViews;
+    private final Long maxViews;
+    private final Instant createdFrom;
+    private final Instant createdTo;
+    private final Instant updatedFrom;
+    private final Instant updatedTo;
+    private final String sortKey;
+    private final String sortDir;
 
-    public boolean hasText() { return q != null && !q.isBlank(); }
-    public boolean hasTags() { return tagSlugs != null && !tagSlugs.isEmpty(); }
+    private final VisibilityScope scope;
+
+    public enum TagMode { ANY, ALL }
+    public enum VisibilityScope { PUBLIC_ONLY, MINE_ONLY, MINE_OR_PUBLIC, OWNER_PUBLIC, OWNER_ACCESSIBLE }
+
+    public boolean hasText() {
+        return q != null && !q.isBlank();
+    }
+
+    public boolean hasTags() {
+        return tag != null && !tag.isEmpty();
+    }
+
+    private static NoteQueryBuilder base(NoteSearchRequest req, Long viewerId, Long ownerId) {
+        return builderInternal()
+                .q(req.getQ())
+                .categoryId(req.getCategoryId())
+                .includeChildren(req.isIncludeChildren())
+                .tag(req.getTag() == null ? null : Set.copyOf(req.getTag()))
+                .tagMode(req.getTagMode())
+                .viewerId(viewerId)
+                .ownerId(ownerId)
+                .minViews(req.getMinViews()).maxViews(req.getMaxViews())
+                .createdFrom(req.getCreatedFrom()).createdTo(req.getCreatedTo())
+                .updatedFrom(req.getUpdatedFrom()).updatedTo(req.getUpdatedTo())
+                .sortKey(req.getSortKey()).sortDir(req.getSortDir());
+    }
+    private static NoteQuery buildChecked(NoteQueryBuilder b) {
+        NoteQuery q = b.build();
+        Objects.requireNonNull(q.scope, "scope is required");
+        return q;
+    }
+
+    public static NoteQuery publicOnly(NoteSearchRequest req) {
+        return buildChecked(base(req, null, null).scope(VisibilityScope.PUBLIC_ONLY));
+    }
+    public static NoteQuery mineOnly(NoteSearchRequest req, long viewerId) {
+        return buildChecked(base(req, viewerId, viewerId).scope(VisibilityScope.MINE_ONLY));
+    }
+    public static NoteQuery mineOrPublic(NoteSearchRequest req, Long viewerId) {
+        var scope = (viewerId == null) ? VisibilityScope.PUBLIC_ONLY : VisibilityScope.MINE_OR_PUBLIC;
+        return buildChecked(base(req, viewerId, null).scope(scope));
+    }
+    public static NoteQuery ownerPublic(NoteSearchRequest req, long ownerId) {
+        return buildChecked(base(req, null, ownerId).scope(VisibilityScope.OWNER_PUBLIC));
+    }
+    public static NoteQuery ownerAccessible(NoteSearchRequest req, long ownerId, Long viewerId) {
+        return buildChecked(base(req, viewerId, ownerId).scope(VisibilityScope.OWNER_ACCESSIBLE));
+    }
 }

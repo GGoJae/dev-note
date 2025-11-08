@@ -15,4 +15,9 @@ public record MemberPrincipal(Long id, String username, String password,
     @Override public boolean isAccountNonLocked(){ return true; }
     @Override public boolean isCredentialsNonExpired(){ return true; }
     @Override public boolean isEnabled(){ return enabled; }
+
+    public static MemberPrincipal fromJwt(Long id, String username,
+                                          Collection<? extends GrantedAuthority> authorities) {
+        return new MemberPrincipal(id, username, "", authorities, true);
+    }
 }

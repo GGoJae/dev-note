@@ -1,6 +1,7 @@
 package com.gj.dev_note.artifact.api;
 
 import com.gj.dev_note.artifact.dto.ArtifactGroupTypeDto;
+import com.gj.dev_note.common.enums.EnumUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,8 +15,8 @@ import java.util.List;
 public class ArtifactApi {
 
     @GetMapping("/group-type-values")
-    public List<ArtifactGroupTypeDto.ArtifactGroupValues> getGroupTypeValues() {
-        return ArtifactGroupTypeDto.showValues();
+    public List<EnumUtils.Option> getGroupTypeValues() {
+        return EnumUtils.options(ArtifactGroupTypeDto.class);
     }
 
 }

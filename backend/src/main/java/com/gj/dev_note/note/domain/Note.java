@@ -4,6 +4,7 @@ import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.tag.domain.NoteTagMap;
+import com.gj.dev_note.tag.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -56,7 +57,11 @@ public class Note {
 
     @OneToMany(mappedBy="note", cascade=CascadeType.ALL, orphanRemoval=true)
     @Builder.Default
-    private Set<NoteTagMap> tagMaps = new HashSet<>();
+    private Set<NoteTagMap> tags = new HashSet<>();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Instant contentUpdatedAt = Instant.now();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -66,4 +71,10 @@ public class Note {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    public void editContent(String title, String content, Set<Tag> tags) {
+        this.title =title;
+        this.content = content;
+        // TODO tag 교체 로직 따로 작성 후에 추가
+        this.contentUpdatedAt = Instant.now();
+    }
 }

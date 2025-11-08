@@ -1,7 +1,7 @@
 package com.gj.dev_note.note.service;
 
 import com.gj.dev_note.member.repository.MemberRepository;
-import com.gj.dev_note.note.common.PageEnvelope;
+import com.gj.dev_note.common.PageEnvelope;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
 import com.gj.dev_note.note.repository.NoteRepository;
@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;

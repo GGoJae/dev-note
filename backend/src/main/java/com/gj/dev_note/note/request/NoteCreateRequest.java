@@ -1,6 +1,6 @@
 package com.gj.dev_note.note.request;
 
-import com.gj.dev_note.note.request.common.VisibilityDto;
+import com.gj.dev_note.common.VisibilityDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 

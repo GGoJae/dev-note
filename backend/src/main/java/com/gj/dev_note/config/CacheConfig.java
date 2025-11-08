@@ -2,7 +2,7 @@ package com.gj.dev_note.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.gj.dev_note.note.common.PageEnvelope;
+import com.gj.dev_note.common.PageEnvelope;
 import com.gj.dev_note.note.response.NoteResponse;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;

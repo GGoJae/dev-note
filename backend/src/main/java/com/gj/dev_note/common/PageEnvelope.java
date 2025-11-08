@@ -1,4 +1,4 @@
-package com.gj.dev_note.note.common;
+package com.gj.dev_note.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
