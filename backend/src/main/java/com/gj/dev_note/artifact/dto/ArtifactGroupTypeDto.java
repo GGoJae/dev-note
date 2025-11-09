@@ -15,7 +15,7 @@ public enum ArtifactGroupTypeDto implements CodeLabel<ArtifactGroupType> {
     private final String code;
     private final String label;
     private final ArtifactGroupType domain;
-    private static final Class<ArtifactGroupTypeDto> thisClass = ArtifactGroupTypeDto.class;
+    private static final Class<ArtifactGroupTypeDto> THIS_CLASS = ArtifactGroupTypeDto.class;
 
     ArtifactGroupTypeDto(String code, String label, ArtifactGroupType domain) {
         this.code = code;
@@ -46,18 +46,22 @@ public enum ArtifactGroupTypeDto implements CodeLabel<ArtifactGroupType> {
 
     @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
     public static ArtifactGroupTypeDto from(String code) {
-        if (code == null) throw new IllegalArgumentException("ArtifactGroupType 는 필수입니다.");
-        ArtifactGroupTypeDto v = EnumUtils.byCodeIndex(thisClass).get(code);
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException(
+                    "CategoryScope code는 필수입니다. 허용 코드: " + EnumUtils.allowedCodes(THIS_CLASS)
+            );
+        }
+        var v = EnumUtils.byCodeIndex(THIS_CLASS).get(code);
         if (v == null) {
             throw new IllegalArgumentException("알 수 없는 code: " + code +
-                    " (허용 code: " + EnumUtils.allowedCodes(thisClass) + ")");
+                    " (허용 code: " + EnumUtils.allowedCodes(THIS_CLASS) + ")");
         }
         return v;
     }
 
     public static ArtifactGroupTypeDto fromType(ArtifactGroupType type) {
         for (var v : values()) if (v.domain == type) return v;
-        throw new IllegalArgumentException("Unsupported domain type: " + type);
+        throw new IllegalArgumentException("지원하지 않는 도메인 타입 : " + type);
     }
 
 }

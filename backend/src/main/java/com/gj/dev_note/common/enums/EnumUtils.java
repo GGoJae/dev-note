@@ -19,7 +19,7 @@ public final class EnumUtils {
 
     public static <E extends Enum<E> & CodeLabel<?>> List<Option> options(Class<E> type) {
         return Arrays.stream(type.getEnumConstants())
-                .map(Option::toOption)
+                .map(Option::of)
                 .toList();
     }
 
@@ -29,7 +29,7 @@ public final class EnumUtils {
     }
 
     public record Option(String code, String label) {
-        public static Option toOption(CodeLabel<?> codeLabel) {
+        public static Option of(CodeLabel<?> codeLabel) {
             return new Option(codeLabel.code(), codeLabel.label());
         }
     }
