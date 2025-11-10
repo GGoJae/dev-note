@@ -1,36 +1,48 @@
 package com.gj.dev_note.note.service;
 
-import com.gj.dev_note.member.repository.MemberRepository;
+import com.gj.dev_note.category.domain.Category;
+import com.gj.dev_note.category.service.CategoryService;
 import com.gj.dev_note.common.PageEnvelope;
+import com.gj.dev_note.common.Visibility;
+import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
 import com.gj.dev_note.note.repository.NoteRepository;
 import com.gj.dev_note.note.request.NoteCreateRequest;
-import com.gj.dev_note.note.request.NoteUpdateRequest;
+import com.gj.dev_note.note.request.NotePatchRequest;
 import com.gj.dev_note.note.response.NoteDetail;
 import com.gj.dev_note.note.response.NoteSummary;
+import com.gj.dev_note.security.CurrentUser;
+import com.gj.dev_note.tag.domain.Tag;
+import com.gj.dev_note.tag.service.TagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class NoteService {
-    private final NoteRepository repo;
-    private final CacheManager cacheManager;
+
+    private final NoteRepository noteRepo;
     private final MemberRepository memberRepo;
+    private final CategoryService categoryService;
+    private final TagService tagService;
 
     public boolean existsById(Long id) {
-        return repo.existsById(id);
+        return noteRepo.existsById(id);
     }
 
     @Cacheable(
@@ -39,7 +51,7 @@ public class NoteService {
             sync = true
     )
     public PageEnvelope<NoteSummary> getList(Pageable pageable) {
-        var page = repo.findAll(pageable)
+        var page = noteRepo.findAll(pageable)
                 .map(NoteMapper::toSummary);
 
         return PageEnvelope.of(page);
@@ -50,60 +62,68 @@ public class NoteService {
             key = "'note:'+#id"
     )
     public NoteDetail getNote(Long id) {
-        // 캐시 매니저를 사용할 때 수동 버전
-//        Cache cache = cacheManager.getCache("noteById");
-//        if (cache != null) {
-//            NoteResponse cacheHit = cache.get(id, NoteResponse.class);
-//            if (cacheHit != null) {
-//                return cacheHit;
-//            }
-//        }
-
-        Note note = repo.findById(id).orElseThrow();
-
-//        if (cache != null) {
-//            NoteResponse noteCache = NoteMapper.toResponse(note);
-//            log.debug("캐시에 노트 저장, caching 필드를 true 인 상태로 저장 , {}", noteCache);
-//            cache.put(id, noteCache);
-//        }
+        Note note = noteRepo.findById(id).orElseThrow(() -> notFound(id));
+        if (!canView(CurrentUser.idOpt().orElse(null), note)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         return NoteMapper.toDetail(note);
     }
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
-    public NoteDetail createNote(Long ownerId, NoteCreateRequest createNote) {
-        var ownerRef = memberRepo.getReferenceById(ownerId);
+    public NoteDetail createNote(Long ownerId, NoteCreateRequest req) {
+        var owner = memberRepo.findById(ownerId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자: " + ownerId));
+
+        var category = categoryService.resolveForAssign(ownerId, req.categoryId());
+
+        var tags = tagService.resolveBySlugs(req.tagSlugs());
+
         Note newNote = Note.builder()
-                .title(createNote.title())
-                .content(createNote.content())
-                .owner(ownerRef)
+                .owner(owner)
+                .title(req.title())
+                .content(req.content())
+                .visibility(req.visibility().toType())
                 .build();
-        Note saved = repo.save(newNote);
-        log.debug("저장된 노트 : {} ", saved);
-//        Cache cache = cacheManager.getCache("noteById");
-//        if (cache != null) {
-//            log.debug("캐시에 저장");
-//            cache.put(saved.getId(), NoteMapper.toResponse(saved));
-//        }
+
+        newNote.moveCategory(category);
+        newNote.replaceTags(tags);
+
+        Note saved = noteRepo.save(newNote);
+
+        log.debug("생성된 note : id={}, title={}", saved.getId(), saved.getTitle());
 
         return NoteMapper.toDetail(saved);
     }
 
-    @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
-    public NoteDetail updateNote(Long id, NoteUpdateRequest noteUpdateRequest) {
-        Note note = repo.findById(id).orElseThrow();
-        log.debug("update 전 note: {}",note);
-        note.setTitle(noteUpdateRequest.title());
-        note.setContent(noteUpdateRequest.content());
-        log.debug("update 전 note: {}",note);
+    public NoteDetail patchNote(Long actorId, Long noteId, NotePatchRequest patch, String ifMatch) {
+        Note note = noteRepo.findById(noteId).orElseThrow(() -> notFound(noteId));
+        ensureCanEdit(actorId, note);
+        ensureVersion(ifMatch, note.getVersion());
 
-        Cache cache = cacheManager.getCache("noteById");
-        if (cache != null) {
-            log.debug("캐시에 저장");
-            cache.put(id, NoteMapper.toDetail(note));
+        if (patch.hasTitle()) note.renameTitle(patch.title());
+        if (patch.hasContent()) note.rewriteContent(patch.content());
+        if (patch.hasVisibility()) note.changeVisibility(patch.visibility().toType());
+        if (patch.hasCategoryId()) {
+            Category c = categoryService.resolveForAssign(actorId, patch.categoryId());
+            note.moveCategory(c);
         }
+
+        return NoteMapper.toDetail(note);
+    }
+
+    @Transactional
+    public NoteDetail replaceTags(Long actorId, Long noteId, List<String> slugList, String ifMatch) {
+        Note note = noteRepo.findById(noteId).orElseThrow(() -> notFound(noteId));
+        ensureCanEdit(actorId, note);
+        ensureVersion(ifMatch, note.getVersion());
+
+        Set<String> normalized = normalizeSlugs(slugList);
+        Set<Tag> tags = tagService.resolveBySlugs(normalized);
+        note.replaceTags(tags);
+
         return NoteMapper.toDetail(note);
     }
 
@@ -113,9 +133,53 @@ public class NoteService {
     })
     @Transactional
     public void deleteNote(Long id) {
-        log.debug("delete Note 진입");
-        repo.deleteById(id);
+        Note note = noteRepo.findById(id).orElseThrow(() -> notFound(id));
+        ensureCanEdit(CurrentUser.id(), note);
+        noteRepo.delete(note);
+    }
 
-        log.debug("delete Note 완료");
+
+    private boolean canView(Long viewerId, Note n) {
+        if (n.getVisibility() == Visibility.PUBLIC) return true;
+        return viewerId != null && Objects.equals(n.getOwner().getId(), viewerId);
+    }
+
+    private void ensureCanEdit(Long actorId, Note n) {
+        if (actorId == null || !Objects.equals(n.getOwner().getId(), actorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private void ensureVersion(String ifMatch, Long currentVersion) {
+        if (currentVersion == null) return; // 버전 미사용이면 패스
+        if (ifMatch == null || ifMatch.isBlank()) return; // 선택: 없으면 허용/거부 정책 선택
+        long expected = parseEtag(ifMatch);
+        if (!Objects.equals(expected, currentVersion)) {
+            throw new ConcurrencyFailureException("version conflict");
+        }
+    }
+
+    public String etagOf(Long noteId) {
+        Long v = noteRepo.findVersionById(noteId).orElse(null);
+        return (v == null) ? null : "\"v%d\"".formatted(v);
+    }
+
+    private long parseEtag(String ifMatch) {
+        String s = ifMatch.replace("W/", "").replace("\"", "");
+        if (!s.startsWith("v")) throw new IllegalArgumentException("bad ETag");
+        return Long.parseLong(s.substring(1));
+    }
+
+    private Set<String> normalizeSlugs(List<String> in) {
+        if (in == null) return Set.of();
+        return in.stream()
+                .filter(Objects::nonNull)
+                .map(s -> s.trim().toLowerCase(Locale.ROOT))
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private ResponseStatusException notFound(Long id) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "note not found: " + id);
     }
 }

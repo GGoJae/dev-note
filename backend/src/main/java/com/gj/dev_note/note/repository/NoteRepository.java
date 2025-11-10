@@ -1,13 +1,12 @@
 package com.gj.dev_note.note.repository;
 
 import com.gj.dev_note.note.domain.Note;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.Optional;
 
 public interface NoteRepository extends JpaRepository<Note, Long> {
 
@@ -17,5 +16,8 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 
     boolean existsByIdAndOwnerId(Long id, Long ownerId);
 
-    Page<Note> findAll(Specification<Note> spec, Pageable pageReq);
+    @Query("select n.version from Note n where n.id = :id")
+    Optional<Long> findVersionById(@Param("id") Long id);
+
+    boolean existsByCategoryId(Long categoryId);
 }

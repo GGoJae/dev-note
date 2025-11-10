@@ -12,7 +12,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name="note",
@@ -23,7 +26,7 @@ import java.util.Set;
                 @Index(name="idx_note_created_at", columnList="createdAt")
         }
 )
-@Getter @Setter
+@Getter @Setter(AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor @Builder
 public class Note {
@@ -57,10 +60,9 @@ public class Note {
 
     @OneToMany(mappedBy="note", cascade=CascadeType.ALL, orphanRemoval=true)
     @Builder.Default
-    private Set<NoteTagMap> tags = new HashSet<>();
+    private Set<NoteTagMap> tags = new LinkedHashSet<>();
 
     @Column(nullable = false)
-    @Builder.Default
     private Instant contentUpdatedAt;
 
     @CreationTimestamp
@@ -71,15 +73,69 @@ public class Note {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     void initContentUpdatedAt() {
         if (contentUpdatedAt == null) contentUpdatedAt = Instant.now();
     }
 
-    public void editContent(String title, String content, Set<Tag> tags) {
-        this.title =title;
-        this.content = content;
-        // TODO tag 교체 로직 따로 작성 후에 추가
+    public void renameTitle(String newTitle) {
+        if (newTitle == null || newTitle.isBlank()) return;
+        if (!Objects.equals(this.title, newTitle)) {
+            this.title = newTitle;
+            touchContentClock();
+        }
+    }
+
+    public void rewriteContent(String newContent) {
+        if (newContent == null || newContent.isBlank()) return;
+        if (!Objects.equals(this.content, newContent)) {
+            this.content = newContent;
+            touchContentClock();
+        }
+    }
+
+    public void changeVisibility(Visibility visibility) {
+        if (visibility == null) return;
+        this.visibility = visibility;
+    }
+
+    public void moveCategory(Category category) {
+        if (category == null) return;
+        this.category = category;
+    }
+
+    public void replaceTags(Set<Tag> newTags) {
+        if (newTags == null) newTags = Set.of();
+
+        Set<Long> cur = this.tags.stream()
+                .map(ntm -> ntm.getTag().getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> incoming = newTags.stream()
+                .map(Tag::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (Objects.equals(cur, incoming)) return;
+
+        this.tags.removeIf(ntm -> ntm.getTag() != null && !incoming.contains(ntm.getTag().getId()));
+
+        Set<Long> existing = this.tags.stream()
+                .map(ntm -> ntm.getTag().getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        for (Tag t : newTags) {
+            if (t.getId() == null || !existing.contains(t.getId())) {
+                this.tags.add(NoteTagMap.builder().note(this).tag(t).build());
+            }
+        }
+    }
+
+    private void touchContentClock() {
         this.contentUpdatedAt = Instant.now();
     }
 }

@@ -1,7 +1,7 @@
 package com.gj.dev_note.note.api;
 
 import com.gj.dev_note.note.request.NoteCreateRequest;
-import com.gj.dev_note.note.request.NoteUpdateRequest;
+import com.gj.dev_note.note.request.NotePatchRequest;
 import com.gj.dev_note.note.response.NoteDetail;
 import com.gj.dev_note.note.response.NoteSummary;
 import com.gj.dev_note.note.service.NoteService;
@@ -11,7 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequestMapping("/api/notes")
 @RestController
@@ -25,8 +28,12 @@ public class NoteApi {
     }
 
     @GetMapping("/{id}")
-    public NoteDetail getNote(@PathVariable Long id) {
-        return service.getNote(id);
+    public ResponseEntity<NoteDetail> getNote(@PathVariable Long id) {
+        var note = service.getNote(id);
+
+        return ResponseEntity.ok()
+                .eTag(service.etagOf(note.id()))
+                .body(note);
     }
 
     @PostMapping
@@ -35,14 +42,41 @@ public class NoteApi {
         return ResponseEntity.ok(saved);
     }
 
-    @PutMapping("/{id}")
-    public NoteDetail updateNote(@PathVariable Long id, NoteUpdateRequest noteUpdateRequest) {
-        return service.updateNote(id, noteUpdateRequest);
+
+    @PreAuthorize("@noteAuthz.isOwner(#id")
+    @PatchMapping(value = "/{id}", consumes = {"application/merge-patch+json", "application/json"})
+    public ResponseEntity<NoteDetail> patchNote(
+            @PathVariable Long id,
+            @RequestBody NotePatchRequest patch,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
+    ) {
+        var result = service.patchNote(CurrentUser.id(), id, patch, ifMatch);
+
+        return ResponseEntity.ok()
+                .eTag(service.etagOf(result.id()))
+                .body(result);
     }
 
-    @DeleteMapping("/{id}")
-    public boolean deleteNote(@PathVariable Long id) {
-        service.deleteNote(id);
-        return !service.existsById(id);
+    @PreAuthorize("@noteAuthz.isOwner(#id)")
+    @PutMapping("/{id}/tags")
+    public ResponseEntity<NoteDetail> replaceTag(
+            @PathVariable Long id,
+            @RequestBody List<String> slugs,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
+    ) {
+        var result = service.replaceTags(CurrentUser.id(), id, slugs, ifMatch);
+
+        return ResponseEntity.ok()
+                .eTag(service.etagOf(result.id()))
+                .body(result);
     }
+
+    @PreAuthorize("@noteAuthz.isOwner(#id)")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteNote(@PathVariable Long id) {
+        service.deleteNote(id);
+        return ResponseEntity.noContent().build();
+    }
+
+
 }
