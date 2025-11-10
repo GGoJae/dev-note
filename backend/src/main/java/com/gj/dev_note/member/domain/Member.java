@@ -14,36 +14,78 @@ import java.util.Set;
         indexes = {
                 @Index(name = "idx_member_email", columnList = "email", unique = true)
         })
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor @Builder
+@AllArgsConstructor
+@Builder
 public class Member {
 
-        @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        @Column(nullable = false, length = 150, unique = true)
-        private String email;
+    @Column(nullable = false, length = 150, unique = true)
+    private String email;
 
-        @Column(nullable = false, length = 200)
-        private String passwordHash;
+    @Column(nullable = false, length = 200)
+    private String passwordHash;
 
-        @Column(nullable = false, length = 60)
-        private String nickname;
+    @Column(nullable = false, length = 60)
+    private String nickname;
 
-        @ElementCollection(fetch = FetchType.EAGER, targetClass = Role.class)
-        @CollectionTable(name = "member_roles",
-                joinColumns = @JoinColumn(name="member_id"))
-        @Enumerated(EnumType.STRING)
-        @Column(name="role", nullable=false, length=20)
-        @Builder.Default
-        private Set<Role> roles = EnumSet.of(Role.USER);
+    @ElementCollection(fetch = FetchType.LAZY, targetClass = Role.class)
+    @CollectionTable(name = "member_roles",
+            joinColumns = @JoinColumn(name = "member_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    @Builder.Default
+    private Set<Role> roles = EnumSet.of(Role.USER);
 
-        @CreationTimestamp
-        @Column(nullable=false, updatable=false)
-        private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private MemberStatus status = MemberStatus.ACTIVE;
 
-        @UpdateTimestamp
-        @Column(nullable=false)
-        private Instant updatedAt;
+    private Instant emailVerifiedAt;
+
+    private Instant lastLoginAt;
+
+    @Builder.Default
+    private int failedLoginCount = 0;
+
+    private Instant lockUntil;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private Instant updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    void normalize() {
+        if (email != null) email = email.trim();
+        if (nickname != null) nickname = nickname.trim();
+    }
+
+    public boolean isLockedNow() {
+        return lockUntil != null && lockUntil.isAfter(Instant.now());
+    }
+
+    public void onLoginSuccess() {
+        this.failedLoginCount = 0;
+        this.lockUntil = null;
+        this.lastLoginAt = Instant.now();
+    }
+
+    public void onLoginFail(int threshold, int lockMinutes) {
+        this.failedLoginCount++;
+        if (this.failedLoginCount >= threshold) {
+            this.lockUntil = Instant.now().plusSeconds(lockMinutes * 60L);
+            this.failedLoginCount = 0;
+        }
+    }
 }

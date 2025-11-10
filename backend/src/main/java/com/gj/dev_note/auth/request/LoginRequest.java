@@ -1,10 +1,10 @@
-package com.gj.dev_note.auth.dto.request;
+package com.gj.dev_note.auth.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(
-        @Email String email,
+        @Email @NotBlank String email,
         @NotBlank String password
 ) {
 }

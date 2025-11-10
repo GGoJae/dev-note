@@ -1,9 +1,14 @@
 package com.gj.dev_note.auth.service;
 
-import com.gj.dev_note.auth.dto.response.AuthResponse;
-import com.gj.dev_note.auth.dto.request.LoginRequest;
-import com.gj.dev_note.auth.dto.request.SignupRequest;
+import com.gj.dev_note.auth.request.LoginRequest;
+import com.gj.dev_note.auth.request.SignupRequest;
+import com.gj.dev_note.auth.response.AuthResponse;
+import com.gj.dev_note.common.exception.AccountLockedException;
+import com.gj.dev_note.common.exception.BadRequestException;
+import com.gj.dev_note.common.exception.EmailAlreadyUsedException;
+import com.gj.dev_note.common.exception.InvalidCredentialsException;
 import com.gj.dev_note.member.domain.Member;
+import com.gj.dev_note.member.domain.MemberStatus;
 import com.gj.dev_note.member.domain.Role;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.security.JwtIssuer;
@@ -13,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -24,30 +30,62 @@ public class AuthService {
     private final JwtIssuer jwtIssuer;
     private final JwtProperties props;
 
+    // 정책 상수 (원하면 yml로 뺄 수 있음)
+    private static final int LOCK_THRESHOLD = 5;
+    private static final int LOCK_MINUTES = 15;
+
     @Transactional
     public void signup(SignupRequest req) {
-        if (memberRepo.existsByEmail(req.email())) {
-            throw new IllegalArgumentException("이미 사용 중인 이메일");
+        String email = normalizeEmail(req.email());
+        String nickname = req.nickname().trim();
+
+        if (memberRepo.existsByEmail(email)) {
+            throw new EmailAlreadyUsedException(email);
         }
+
+        String hash = passwordEncoder.encode(req.password());
+
         Member m = Member.builder()
-                .email(req.email())
-                .passwordHash(passwordEncoder.encode(req.password()))
-                .nickname(req.nickname())
+                .email(email)
+                .passwordHash(hash)
+                .nickname(nickname)
                 .roles(Set.of(Role.USER))
+                .status(MemberStatus.ACTIVE)
                 .build();
+
         memberRepo.save(m);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest req) {
-        Member m = memberRepo.findByEmail(req.email())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
+        String email = normalizeEmail(req.email());
+
+        Member m = memberRepo.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (m.getStatus() != MemberStatus.ACTIVE) {
+            throw new BadRequestException("활성화되지 않은 계정입니다.");
+        }
+        if (m.isLockedNow()) {
+            throw new AccountLockedException(String.valueOf(m.getLockUntil()));
+        }
 
         if (!passwordEncoder.matches(req.password(), m.getPasswordHash())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않음");
+            m.onLoginFail(LOCK_THRESHOLD, LOCK_MINUTES);
+            returnAuthFail();
         }
+
+        m.onLoginSuccess();
 
         String token = jwtIssuer.issue(m.getId(), m.getEmail(), m.getRoles());
         return new AuthResponse(token, "Bearer", props.expirationSeconds);
+    }
+
+    private void returnAuthFail() {
+        throw new InvalidCredentialsException();
+    }
+
+    private String normalizeEmail(String raw) {
+        return raw == null ? null : raw.trim().toLowerCase(Locale.ROOT);
     }
 }

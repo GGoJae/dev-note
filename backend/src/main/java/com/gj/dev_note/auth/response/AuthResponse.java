@@ -1,4 +1,4 @@
-package com.gj.dev_note.auth.dto.response;
+package com.gj.dev_note.auth.response;
 
 public record AuthResponse(
         String accessToken,
