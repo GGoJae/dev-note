@@ -5,7 +5,6 @@ import com.gj.dev_note.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import lombok.*;
 
 import java.time.Instant;
 
