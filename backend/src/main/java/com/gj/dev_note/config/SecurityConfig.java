@@ -2,6 +2,8 @@ package com.gj.dev_note.config;
 
 import com.gj.dev_note.security.JwtProperties;
 import com.gj.dev_note.security.MemberPrincipal;
+import com.gj.dev_note.security.PasswordProps;              // ← 추가
+import com.gj.dev_note.security.PepperedPasswordEncoder;   // ← 추가
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +28,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,17 +46,15 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> {
             var c = new CorsConfiguration();
             c.setAllowedOrigins(List.of("http://localhost:5173"));
-            c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
-            c.setAllowedHeaders(List.of("*"));
-            c.setAllowCredentials(true);
+            c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             c.setAllowedHeaders(List.of("Authorization","Content-Type","X-Requested-With"));
             c.setExposedHeaders(List.of("Authorization"));
+            c.setAllowCredentials(true);
             return c;
         }));
 
         http.csrf(AbstractHttpConfigurer::disable);
-        http.sessionManagement(sm -> sm.sessionCreationPolicy(
-                SessionCreationPolicy.STATELESS));
+        http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
@@ -78,18 +79,15 @@ public class SecurityConfig {
         return http.build();
     }
 
-
+    // === JWT Decoder: Base64 지원 + 키 길이 보장 ===
     @Bean
     public JwtDecoder jwtDecoder() {
-        byte[] secret = props.secret.getBytes(StandardCharsets.UTF_8);
-        SecretKeySpec key = new SecretKeySpec(secret, "HmacSHA256");
-
+        SecretKeySpec key = hmacKey(props.secret);
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
 
         OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(props.issuer);
-
         DelegatingOAuth2TokenValidator<Jwt> withClockSkew = new DelegatingOAuth2TokenValidator<>(
                 withIssuer, new JwtTimestampValidator(Duration.ofSeconds(30))
         );
@@ -97,21 +95,26 @@ public class SecurityConfig {
         return decoder;
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    private SecretKeySpec hmacKey(String secret) {
+        // 운영에선 Base64로 넣는 걸 권장. Base64 같으면 decode, 아니면 UTF-8 바이트 사용.
+        byte[] raw;
+        try {
+            raw = Base64.getDecoder().decode(secret);
+            if (raw.length < 32) throw new IllegalArgumentException("jwt.secret(Base64)가 32바이트 미만");
+        } catch (IllegalArgumentException e) {
+            raw = secret.getBytes(StandardCharsets.UTF_8);
+            if (raw.length < 32) {
+                throw new IllegalArgumentException("jwt.secret가 32바이트 미만입니다. 더 긴 시크릿을 사용하세요.");
+            }
+        }
+        return new SecretKeySpec(raw, "HmacSHA256");
     }
 
-//    @Bean
-//    private JwtAuthenticationConverter jwtAuthConverter() {
-//        var converter = new JwtAuthenticationConverter();
-//        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-//            List<String> roles = jwt.getClaimAsStringList("roles");
-//            if (roles == null) return List.of();
-//            return roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
-//        });
-//        return converter;
-//    }
+    // === PasswordEncoder: pepper 적용 ===
+    @Bean
+    public PasswordEncoder passwordEncoder(PasswordProps props) {
+        return new PepperedPasswordEncoder(new BCryptPasswordEncoder(), props.getPepper());
+    }
 
     @Bean
     public Converter<Jwt, ? extends AbstractAuthenticationToken> memberJwtAuthConverter() {
@@ -131,13 +134,10 @@ public class SecurityConfig {
             String username = Optional.ofNullable(jwt.getClaimAsString("email"))
                     .orElse(jwt.getSubject());
 
-            MemberPrincipal principal = MemberPrincipal.fromJwt(uid, username, authorities);
+            var principal = MemberPrincipal.fromJwt(uid, username, authorities);
 
             return new JwtAuthenticationToken(jwt, authorities, username) {
-                @Override
-                public Object getPrincipal() {
-                    return principal;
-                }
+                @Override public Object getPrincipal() { return principal; }
             };
         };
     }

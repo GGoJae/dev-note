@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 
 @Entity
@@ -67,7 +68,7 @@ public class Member {
     @PrePersist
     @PreUpdate
     void normalize() {
-        if (email != null) email = email.trim();
+        if (email != null) email = email.trim().toLowerCase(Locale.ROOT);
         if (nickname != null) nickname = nickname.trim();
     }
 

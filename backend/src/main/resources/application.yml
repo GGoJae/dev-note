@@ -6,6 +6,17 @@ jwt:
   expiration-seconds: 36000
   secret: ${JWT_SECRET:change-me}
 
+auth:
+  token:
+    email-verify-minutes: 60
+    password-reset-minutes: 30
+    refresh-days: 14
+
+app:
+  public-base-url: "http://localhost:8080"
+  verify-email-path: "/api/auth/verify-email"
+  reset-password-path: "/api/auth/reset-password"
+
 spring:
   application:
     name: dev-note
@@ -13,6 +24,8 @@ spring:
   security:
     oauth2:
       resourceserver:
+    password:
+      pepper: ${PASSWORD_PEPPER:change-me-in-prod}
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appdb}
