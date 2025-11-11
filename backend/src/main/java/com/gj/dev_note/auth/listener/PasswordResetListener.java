@@ -17,6 +17,7 @@ public class PasswordResetListener {
     private final MailService mail;
     private final VerificationLinkBuilder links;
 
+    // TODO 나중에 비동기 처리
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onIssued(PasswordResetIssued e) {
         String link = links.passwordResetLink(e.token());

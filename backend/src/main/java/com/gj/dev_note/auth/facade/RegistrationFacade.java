@@ -22,7 +22,7 @@ public class RegistrationFacade {
     public Long signup(SignupRequest cmd) {
         Member m = memberService.register(cmd);                 // 멤버 저장
         String token = emailVerificationService.issueToken(m);  // 토큰 저장
-        // 메일은 커밋 후 발송
+        // TODO 지금은 동기처리하는데 추후 비동기 처리 혹은 메세지큐 적용하기
         events.publishEvent(new EmailVerificationIssued(m.getEmail(), token));
         return m.getId();
     }
