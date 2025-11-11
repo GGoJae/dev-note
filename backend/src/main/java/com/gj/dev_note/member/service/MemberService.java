@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -38,6 +39,6 @@ public class MemberService {
     public static String normalizeEmail(String raw) {
         if (raw == null) return null;
         String s = Normalizer.normalize(raw.trim(), Normalizer.Form.NFKC);
-        return s.toLowerCase(java.util.Locale.ROOT);
+        return s.toLowerCase(Locale.ROOT);
     }
 }
