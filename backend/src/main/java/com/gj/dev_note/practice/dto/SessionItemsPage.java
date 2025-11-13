@@ -1,4 +1,9 @@
 package com.gj.dev_note.practice.dto;
 
-public record SessionItemsPage() {
+import java.util.List;
+
+public record SessionItemsPage(
+        List<SessionItemSummary> items,
+        String nextCursor
+) {
 }

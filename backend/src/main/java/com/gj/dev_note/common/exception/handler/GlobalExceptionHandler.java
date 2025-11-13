@@ -1,5 +1,6 @@
-package com.gj.dev_note.common.exception;
+package com.gj.dev_note.common.exception.handler;
 
+import com.gj.dev_note.common.exception.exceptions.*;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<?> handleBad(BadRequestException e) {
         return body(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(DumbDeveloperException.class)
+    public ResponseEntity<?> handleDumbDeveloper(DumbDeveloperException e) {
+        return body(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -2,9 +2,9 @@ package com.gj.dev_note.auth.service;
 
 import com.gj.dev_note.auth.request.LoginRequest;
 import com.gj.dev_note.auth.response.AuthResponse;
-import com.gj.dev_note.common.exception.AccountLockedException;
-import com.gj.dev_note.common.exception.BadRequestException;
-import com.gj.dev_note.common.exception.InvalidCredentialsException;
+import com.gj.dev_note.common.exception.exceptions.AccountLockedException;
+import com.gj.dev_note.common.exception.exceptions.BadRequestException;
+import com.gj.dev_note.common.exception.exceptions.InvalidCredentialsException;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.domain.MemberStatus;
 import com.gj.dev_note.member.repository.MemberRepository;

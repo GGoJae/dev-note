@@ -1,4 +1,10 @@
 package com.gj.dev_note.practice.response;
 
-public record AnswerResultResponse() {
+import java.util.Set;
+
+public record AnswerResultResponse(
+        boolean correct,
+        Integer remainingCorrect,
+        Set<Long> correctChoiceIds
+) {
 }

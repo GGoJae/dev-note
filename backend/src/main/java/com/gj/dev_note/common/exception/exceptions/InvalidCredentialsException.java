@@ -1,4 +1,4 @@
-package com.gj.dev_note.common.exception;
+package com.gj.dev_note.common.exception.exceptions;
 
 public class InvalidCredentialsException extends RuntimeException {
     public InvalidCredentialsException() {

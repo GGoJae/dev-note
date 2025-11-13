@@ -4,6 +4,7 @@ import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.note.domain.Note;
+import com.gj.dev_note.quiz.model.AnswerPolicy;
 import com.gj.dev_note.tag.domain.QuizTagMap;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,16 +53,19 @@ public class Quiz {
     @Column(nullable = false, columnDefinition = "text")
     private String question;
 
+    @Column(columnDefinition="text")
+    private String explanation;
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC, id ASC")
     @Builder.Default
     private List<QuizChoice> choices = new ArrayList<>();
 
-    @Column(name="correct_choice_id")
-    private Long correctChoiceId;
+    @Enumerated(EnumType.STRING) @Column(nullable=false, length=20)
+    @Builder.Default private AnswerPolicy answerPolicy = AnswerPolicy.SINGLE_ANSWER;
 
     @Column(nullable = false)
-    private int difficulty;     // 1 ~ 5 등급
+    private int difficulty = 3;     // 1 ~ 5 등급
 
     @OneToMany(mappedBy="quiz", cascade=CascadeType.ALL, orphanRemoval=true)
     @Builder.Default

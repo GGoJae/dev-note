@@ -1,4 +1,4 @@
-package com.gj.dev_note.common.exception;
+package com.gj.dev_note.common.exception.exceptions;
 
 public class AccountLockedException extends RuntimeException {
     public AccountLockedException(String until) {

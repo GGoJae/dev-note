@@ -4,7 +4,7 @@ import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.domain.PasswordResetToken;
 import com.gj.dev_note.auth.repository.PasswordResetTokenRepository;
 import com.gj.dev_note.auth.repository.RefreshTokenRepository;
-import com.gj.dev_note.common.exception.InvalidCredentialsException;
+import com.gj.dev_note.common.exception.exceptions.InvalidCredentialsException;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;

@@ -22,6 +22,9 @@ public class QuizChoice {
     @Column(nullable=false, length=300)
     private String text;
 
+    @Column(nullable=false) @Builder.Default
+    private boolean correct = false;
+
     @Column(nullable=false)
     @Builder.Default
     private int displayOrder = 0;

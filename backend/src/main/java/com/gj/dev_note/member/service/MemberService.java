@@ -1,7 +1,7 @@
 package com.gj.dev_note.member.service;
 
 import com.gj.dev_note.auth.request.SignupRequest;
-import com.gj.dev_note.common.exception.EmailAlreadyUsedException;
+import com.gj.dev_note.common.exception.exceptions.EmailAlreadyUsedException;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.domain.MemberStatus;
 import com.gj.dev_note.member.domain.Role;
