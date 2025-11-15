@@ -1,11 +1,9 @@
 package com.gj.dev_note.practice.api;
 
-import com.gj.dev_note.practice.dto.*;
 import com.gj.dev_note.practice.request.AnswerSubmitRequest;
+import com.gj.dev_note.practice.request.FinalizeRequest;
 import com.gj.dev_note.practice.request.SessionCreateRequest;
-import com.gj.dev_note.practice.response.AnswerResultResponse;
-import com.gj.dev_note.practice.response.FinalizeResponse;
-import com.gj.dev_note.practice.response.SessionCreatedResponse;
+import com.gj.dev_note.practice.response.*;
 import com.gj.dev_note.practice.service.PracticeSessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +21,15 @@ public class PracticeSessionApi {
         return service.create(req);
     }
 
-    @GetMapping("/{sessionId}/items")
-    public SessionItemsPage page(@PathVariable Long sessionId,
-                                 @RequestParam(required = false) String cursor) {
-        return service.page(sessionId, cursor);
+    @GetMapping("/{sessionId}/resume")
+    public ResumeResponse resume(@PathVariable Long sessionId) {
+        return service.resume(sessionId);
+    }
+
+    @GetMapping("/{sessionId}/window")
+    public WindowPageResponse window(@PathVariable Long sessionId,
+                                     @RequestParam(required = false) String cursor) {
+        return service.window(sessionId, cursor);
     }
 
     @PostMapping("/{sessionId}/answers")
@@ -35,8 +38,15 @@ public class PracticeSessionApi {
         return service.submit(sessionId, req);
     }
 
+    @PostMapping("/{sessionId}/pass/{sessionItemId}")
+    public WindowPageResponse pass(@PathVariable Long sessionId,
+                                   @PathVariable Long sessionItemId) {
+        return service.pass(sessionId, sessionItemId);
+    }
+
     @PostMapping("/{sessionId}/finalize")
-    public FinalizeResponse finalize(@PathVariable Long sessionId) {
-        return service.finalize(sessionId);
+    public FinalizeResponse finalize(@PathVariable Long sessionId,
+                                     @Valid @RequestBody FinalizeRequest req) {
+        return service.finalizeSession(sessionId, req);
     }
 }

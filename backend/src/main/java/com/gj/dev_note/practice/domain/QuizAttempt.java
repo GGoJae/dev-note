@@ -15,7 +15,8 @@ import java.util.List;
         indexes = {
                 @Index(name="idx_attempt_session", columnList = "session_id"),
                 @Index(name="idx_attempt_item", columnList = "session_item_id"),
-                @Index(name="idx_attempt_owner", columnList = "owner_id")
+                @Index(name="idx_attempt_owner", columnList = "owner_id"),
+                @Index(name="idx_attempt_created", columnList = "createdAt")
         })
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -46,7 +47,12 @@ public class QuizAttempt {
     private Instant createdAt;
 
     @Column(nullable=false)
-    private boolean correct;
+    @Builder.Default
+    private boolean correct = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean skipped = false;
 
     @OneToMany(mappedBy="attempt", cascade=CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

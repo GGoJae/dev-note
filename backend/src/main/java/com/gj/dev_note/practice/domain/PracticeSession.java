@@ -48,6 +48,9 @@ public class PracticeSession {
     private Instant expiresAt;
     private Instant finalizedAt;
 
+    private String finalizeToken;
+    private Instant finalizeTokenExpiresAt;
+
     @OneToMany(mappedBy="session", cascade=CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC, id ASC")
     @Builder.Default
@@ -59,4 +62,13 @@ public class PracticeSession {
     }
 
     public boolean isFinalized() { return finalizedAt != null; }
+    public void issueFinalizeToken(String token, Instant exp) {
+        this.finalizeToken = token;
+        this.finalizeTokenExpiresAt = exp;
+    }
+    public boolean canUseFinalizeToken(String token, Instant now) {
+        if (finalizeToken == null || !finalizeToken.equals(token)) return false;
+        if (finalizeTokenExpiresAt != null && now.isAfter(finalizeTokenExpiresAt)) return false;
+        return true;
+    }
 }

@@ -4,23 +4,23 @@ import com.gj.dev_note.common.exception.exceptions.DumbDeveloperException;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.practice.domain.*;
-import com.gj.dev_note.practice.dto.SessionItemSummary;
-import com.gj.dev_note.practice.dto.SessionItemsPage;
+import com.gj.dev_note.practice.dto.*;
 import com.gj.dev_note.practice.mapper.PracticeMapper;
 import com.gj.dev_note.practice.repository.*;
 import com.gj.dev_note.practice.request.AnswerSubmitRequest;
+import com.gj.dev_note.practice.request.FinalizeRequest;
 import com.gj.dev_note.practice.request.SessionCreateRequest;
-import com.gj.dev_note.practice.response.AnswerResultResponse;
-import com.gj.dev_note.practice.response.FinalizeResponse;
-import com.gj.dev_note.practice.response.SessionCreatedResponse;
+import com.gj.dev_note.practice.response.*;
 import com.gj.dev_note.quiz.domain.Quiz;
 import com.gj.dev_note.quiz.domain.QuizChoice;
 import com.gj.dev_note.quiz.repository.QuizRepository;
 import com.gj.dev_note.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PracticeSessionService {
+
+    private static final int DEFAULT_WINDOW_SIZE = 5;
 
     private final PracticeSessionRepository sessionRepo;
     private final PracticeSessionItemRepository itemRepo;
@@ -87,39 +89,182 @@ public class PracticeSessionService {
         PracticeSession saved = sessionRepo.save(session);
 
         List<PracticeSessionItem> items = itemRepo.findAllBySessionIdOrderByOrderIndexAscIdAsc(saved.getId())
-                .stream().limit(20).toList();
+                .stream().limit(DEFAULT_WINDOW_SIZE).toList();
 
-        List<SessionItemSummary> firstPage = PracticeMapper.toSummaries(items);
+        var firstSummaries = PracticeMapper.toSummaries(items);
+        String nextCursor = (saved.getTotalCount() > DEFAULT_WINDOW_SIZE) ? String.valueOf(DEFAULT_WINDOW_SIZE) : null;
 
-        // TODO nextCursor 더 정교하게 만들기
-        String nextCursor = (saved.getTotalCount() > 20) ? "offset:20" : null;
-
-        return new SessionCreatedResponse(saved.getId(), saved.getTotalCount(), saved.getSeed(), firstPage, nextCursor);
+        return new SessionCreatedResponse(saved.getId(), saved.getTotalCount(), saved.getSeed(), firstSummaries, nextCursor);
     }
 
     @Transactional(readOnly = true)
-    public SessionItemsPage page(Long sessionId, String cursor) {
-        CurrentUser.id(); // 인증 보장 (owner 체크가 필요하다면 세션의 owner와 비교)
+    public ResumeResponse resume(Long sessionId) {
+        Long me = CurrentUser.id();
+        PracticeSession s = requireSessionOwned(sessionId, me);
+
+        // pivot 계산: UNTIL_CORRECT → correct인 마지막 다음 인덱스,
+        // SECTION_END → 시도/패스 포함 마지막 다음 인덱스
+        int pivot = computePivotIndex(s, me);
+
+        int windowStart = Math.max(0, (pivot / DEFAULT_WINDOW_SIZE) * DEFAULT_WINDOW_SIZE);
+        WindowPageResponse window = buildWindow(s, me, windowStart);
+
+        return new ResumeResponse(s.getId(), DEFAULT_WINDOW_SIZE, pivot, window);
+    }
+
+    private int computePivotIndex(PracticeSession s, Long me) {
+        List<PracticeSessionItem> items = s.getItems();
+        FeedbackMode mode = s.getFeedbackMode();
+
+        int n = items.size();
+        for (int i = 0; i < n; i++) {
+            Long itemId = items.get(i).getId();
+            var last = attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(itemId, me);
+            if (last.isEmpty()) {
+                return i; // 미시도 발견 → 여기서 진행
+            }
+            if (mode == FeedbackMode.UNTIL_CORRECT && !last.get().isCorrect()) {
+                return i; // UNTIL_CORRECT에서 정답 아닐 시 해당 위치
+            }
+        }
+        return n; // 전부 완료
+    }
+
+    @Transactional(readOnly = true)
+    public WindowPageResponse window(Long sessionId, String cursor) {
+        Long me = CurrentUser.id();
+        PracticeSession s = requireSessionOwned(sessionId, me);
+
         int offset = parseOffset(cursor);
-        List<PracticeSessionItem> all = itemRepo.findAllBySessionIdOrderByOrderIndexAscIdAsc(sessionId);
-        int end = Math.min(offset + 20, all.size());
-        List<SessionItemSummary> page = PracticeMapper.toSummaries(all.subList(offset, end));
-        String next = (end < all.size()) ? ("offset:" + end) : null;
-        return new SessionItemsPage(page, next);
+        return buildWindow(s, me, offset);
+    }
+
+    private WindowPageResponse buildWindow(PracticeSession s, Long me, int offset) {
+        List<PracticeSessionItem> all = itemRepo.findAllBySessionIdOrderByOrderIndexAscIdAsc(s.getId());
+        int end = Math.min(offset + DEFAULT_WINDOW_SIZE, all.size());
+        List<PracticeSessionItem> slice = all.subList(offset, end);
+
+        // 내 최신 선택 복원
+        List<WindowItem> items = slice.stream().map(it -> {
+            var last = attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me);
+            Set<Long> mySelected = last.map(a -> a.getSelected().stream()
+                            .map(ch -> ch.getChoice().getId())
+                            .collect(Collectors.toCollection(LinkedHashSet::new)))
+                    .orElseGet(LinkedHashSet::new);
+            return new WindowItem(it.getId(), it.getQuiz().getId(), it.getOrderIndex(), mySelected);
+        }).toList();
+
+        ProgressSummary prog = computeProgress(s, me);
+
+        // 권한 플래그
+        boolean canBacktrack = (s.getFeedbackMode() == FeedbackMode.SECTION_END);
+        boolean canEdit      = (s.getFeedbackMode() == FeedbackMode.SECTION_END);
+        boolean canPass      = (s.getFeedbackMode() == FeedbackMode.SECTION_END);
+
+        NextHint next;
+        if (end < all.size()) {
+            next = NextHint.page(end); // 다음 오프셋
+        } else {
+            // 마지막 윈도우 → finalize 게이트 판단
+            String token = issueFinalizeTokenIfAllowed(s, me);
+            next = (token != null) ? NextHint.finalize(token) : NextHint.none();
+        }
+
+        return new WindowPageResponse(s.getId(), DEFAULT_WINDOW_SIZE, offset, items, prog, canBacktrack, canEdit, canPass, next);
+    }
+
+    private ProgressSummary computeProgress(PracticeSession s, Long me) {
+        int total = s.getTotalCount();
+        int attempted; // 패스도 시도로 잡을지 정책화 가능(여기선 "시도/패스 기록 존재"를 attempted로 간주)
+        int correct;
+
+        if (s.getFeedbackMode() == FeedbackMode.UNTIL_CORRECT) {
+            // UNTIL_CORRECT: 마지막 시도가 correct인 아이템 수 == attempted == correct
+            correct   = (int) s.getItems().stream().filter(it ->
+                    attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me)
+                            .map(QuizAttempt::isCorrect).orElse(false)
+            ).count();
+            attempted = correct; // 해당 모드에선 사실상 correct == attempted로 해도 UX상 자연스러움
+        } else {
+            // SECTION_END: 최근 시도(오답/패스 포함) 있으면 attempted로 본다
+            attempted = (int) s.getItems().stream().filter(it ->
+                    attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me)
+                            .isPresent()
+            ).count();
+            correct   = (int) s.getItems().stream().filter(it ->
+                    attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me)
+                            .map(QuizAttempt::isCorrect).orElse(false)
+            ).count();
+        }
+        return new ProgressSummary(attempted, correct, total);
+    }
+
+    private String issueFinalizeTokenIfAllowed(PracticeSession s, Long me) {
+        // 게이트 조건: 마지막 윈도우 시점 + 모드별 완료 요건 충족
+        boolean allowed;
+        if (s.getFeedbackMode() == FeedbackMode.UNTIL_CORRECT) {
+            // 모두 정답이어야
+            allowed = s.getItems().stream().allMatch(it ->
+                    attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me)
+                            .map(QuizAttempt::isCorrect).orElse(false)
+            );
+        } else {
+            // SECTION_END: 모두 "시도 또는 패스" 기록이 있어야(혹은 정책상 일부 미시도도 허용할 수 있음)
+            allowed = s.getItems().stream().allMatch(it ->
+                    attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me)
+                            .isPresent()
+            );
+        }
+        if (!allowed) return null;
+
+        // 이미 토큰 발급되었다면 재사용(유효기간 체크)
+        Instant now = Instant.now();
+        if (s.getFinalizeToken() != null && s.getFinalizeTokenExpiresAt() != null &&
+                now.isBefore(s.getFinalizeTokenExpiresAt())) {
+            return s.getFinalizeToken();
+        }
+
+        String token = RandomStringUtils.randomAlphanumeric(48);
+        s.issueFinalizeToken(token, now.plus(Duration.ofMinutes(10)));
+        return token;
     }
 
     private int parseOffset(String cursor) {
         if (cursor == null || cursor.isBlank()) return 0;
-        if (cursor.startsWith("offset:")) {
-            try {
-                return Integer.parseInt(cursor.substring("offset:".length()));
-            } catch (Exception ignored) {
-            }
-        }
-        return 0;
+        try { return Integer.parseInt(cursor.trim()); } catch (Exception ignore) { return 0; }
     }
 
-    // TODO 전략패턴으로 각 전략별로 응답해주는 클래스로 나누기
+    /*----------------- Pass -----------------*/
+
+    @Transactional
+    public WindowPageResponse pass(Long sessionId, Long sessionItemId) {
+        Long me = CurrentUser.id();
+        PracticeSession s = requireSessionOwned(sessionId, me);
+        if (s.getFeedbackMode() == FeedbackMode.UNTIL_CORRECT) {
+            throw new IllegalArgumentException("해당 모드에서는 pass를 허용하지 않습니다.");
+        }
+
+        PracticeSessionItem item = itemRepo.findByIdAndSessionId(sessionItemId, sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션 아이템을 찾을 수 없습니다."));
+
+        // 이미 시도있으면 스킵 기록 생략 가능. 여기선 "pass 기록"을 남겨 재개 시 포인터가 전진되도록.
+        Member ownerRef = memberRepo.getReferenceById(me);
+        boolean exists = attemptRepo.existsBySessionIdAndSessionItemIdAndOwnerId(sessionId, sessionItemId, me);
+        if (!exists) {
+            QuizAttempt a = QuizAttempt.builder()
+                    .session(s).sessionItem(item).quiz(item.getQuiz())
+                    .owner(ownerRef).correct(false).skipped(true)
+                    .build();
+            attemptRepo.save(a);
+        }
+
+        // pass 후 현재 윈도우 재계산(클라에서 cursor 유지 중이라면 그 offset으로 갱신)
+        // UX상 자연스럽게 하려면 클라가 보고 있던 offset을 같이 넘겨도 됨. 여기선 0으로 단순화하거나 resume 사용.
+        return buildWindow(s, me, 0);
+    }
+
+    /*----------------- 제출(정책 반영) -----------------*/
+
     @Transactional
     public AnswerResultResponse submit(Long sessionId, AnswerSubmitRequest req) {
         Long me = CurrentUser.id();
@@ -130,10 +275,6 @@ public class PracticeSessionService {
         PracticeSession session = item.getSession();
         if (!Objects.equals(session.getOwner().getId(), me))
             throw new IllegalArgumentException("세션 소유자가 아닙니다.");
-
-        boolean exists = attemptRepo.existsBySessionIdAndSessionItemIdAndOwnerId(sessionId, item.getId(), me);
-        if (exists && session.getFeedbackMode() != FeedbackMode.UNTIL_CORRECT) {
-        }
 
         var quiz = item.getQuiz();
         Set<Long> correctSet = quiz.getChoices().stream()
@@ -150,7 +291,7 @@ public class PracticeSessionService {
         Member ownerRef = memberRepo.getReferenceById(me);
         QuizAttempt attempt = QuizAttempt.builder()
                 .session(session).sessionItem(item).quiz(quiz)
-                .owner(ownerRef).correct(correct)
+                .owner(ownerRef).correct(correct).skipped(false)
                 .build();
         var savedAttempt = attemptRepo.save(attempt);
 
@@ -176,18 +317,9 @@ public class PracticeSessionService {
         stat.onAttempt(correct, Instant.now());
         statRepo.save(stat);
 
-        // 피드백 정책별 응답
+        // 피드백
         return switch (session.getFeedbackMode()) {
-            case IMMEDIATE -> new AnswerResultResponse(
-                    correct,
-                    null,
-                    correctSet
-            );
-            case SECTION_END -> new AnswerResultResponse(
-                    correct,
-                    null,
-                    null
-            );
+            case SECTION_END -> new AnswerResultResponse(correct, null, null);
             case UNTIL_CORRECT -> {
                 int remaining = (int) correctSet.stream().filter(id -> !sel.contains(id)).count();
                 yield new AnswerResultResponse(correct, remaining, null);
@@ -195,14 +327,21 @@ public class PracticeSessionService {
         };
     }
 
+    /*----------------- Finalize (토큰 게이트) -----------------*/
+
     @Transactional
-    public FinalizeResponse finalize(Long sessionId) {
+    public FinalizeResponse finalizeSession(Long sessionId, FinalizeRequest req) {
         Long me = CurrentUser.id();
 
         PracticeSession session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("세션 없음"));
         if (!Objects.equals(session.getOwner().getId(), me))
             throw new IllegalArgumentException("세션 소유자가 아닙니다.");
+
+        // 토큰 검증
+        if (!session.canUseFinalizeToken(req.token(), Instant.now())) {
+            throw new IllegalArgumentException("finalize 토큰이 유효하지 않습니다.");
+        }
 
         if (!session.isFinalized()) session.setFinalizedAt(Instant.now());
 
@@ -212,17 +351,46 @@ public class PracticeSessionService {
         int correctCnt = 0;
         List<FinalizeResponse.FinalizedItem> out = new ArrayList<>();
 
-            /*
-            TODO
-            for (PracticeSessionItem it : items) {
-            최근 시도로 대체하려면 별도 쿼리 필요. 여기선 exists 여부만 가정/축약.
-            실제 구현: attemptRepo.findTopBySessionItemIdOrderByCreatedAtDesc(...)
-            여기선 생략하고 리뷰 제외(미시도) 처리.
+        for (var it : items) {
+            var last = attemptRepo.findTopBySessionItemIdAndOwnerIdOrderByCreatedAtDesc(it.getId(), me);
+            if (last.isEmpty()) {
+                out.add(new FinalizeResponse.FinalizedItem(
+                        session.getId(),
+                        it.getQuiz().getId(),
+                        false,
+                        Set.of(),
+                        // SECTION_END에서만 정답 공개(여긴 공개한다고 가정, 필요 시 정책 분리)
+                        it.getQuiz().getChoices().stream().filter(QuizChoice::isCorrect).map(QuizChoice::getId).collect(Collectors.toSet())
+                ));
+                continue;
+            }
+            var a = last.get();
+            attempted++;
+            if (a.isCorrect()) correctCnt++;
 
-            리뷰를 위해선 attempt join이 필요 -> 실전 구현시 보강!
+            Set<Long> selectedIds = a.getSelected().stream().map(ch -> ch.getChoice().getId()).collect(Collectors.toSet());
+            Set<Long> correctIds = it.getQuiz().getChoices().stream().filter(QuizChoice::isCorrect).map(QuizChoice::getId).collect(Collectors.toSet());
+
+            out.add(new FinalizeResponse.FinalizedItem(
+                    session.getId(),
+                    it.getQuiz().getId(),
+                    a.isCorrect(),
+                    selectedIds,
+                    correctIds
+            ));
         }
-             */
+
         return new FinalizeResponse(attempted, correctCnt, out);
+    }
+
+    /*----------------- 공통 -----------------*/
+
+    private PracticeSession requireSessionOwned(Long sessionId, Long me) {
+        PracticeSession s = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션 없음"));
+        if (!Objects.equals(s.getOwner().getId(), me))
+            throw new IllegalArgumentException("세션 소유자가 아닙니다.");
+        return s;
     }
 }
 

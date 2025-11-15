@@ -5,7 +5,7 @@ import com.gj.dev_note.common.enums.EnumDto;
 import com.gj.dev_note.practice.domain.FeedbackMode;
 
 public enum FeedbackModeDto implements EnumDto<FeedbackMode, FeedbackModeDto> {
-    IMMEDIATE("immediate", "즉시", FeedbackMode.IMMEDIATE),
+//    IMMEDIATE("immediate", "즉시", FeedbackMode.IMMEDIATE),
     SECTION_END("section-end", "섹션 종료 후", FeedbackMode.SECTION_END),
     UNTIL_CORRECT("until-correct", "맞출때까지", FeedbackMode.UNTIL_CORRECT);
 
