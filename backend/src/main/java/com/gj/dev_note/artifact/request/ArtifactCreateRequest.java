@@ -18,7 +18,7 @@ public record ArtifactCreateRequest(
 ) {
     public ArtifactCreateRequest{
         if (content.isBlank() && contentUrl.isBlank()) {
-            throw new IllegalArgumentException("content 혹은 contentUrl 작성은 필수입니다.");
+            new IllegalArgumentException("content 혹은 contentUrl 작성은 필수입니다.");
         }
     }
 }

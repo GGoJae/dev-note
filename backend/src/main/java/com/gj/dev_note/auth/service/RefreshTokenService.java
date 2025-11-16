@@ -3,6 +3,7 @@ package com.gj.dev_note.auth.service;
 import com.gj.dev_note.auth.domain.RefreshToken;
 import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.repository.RefreshTokenRepository;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -42,8 +43,8 @@ public class RefreshTokenService {
     @Transactional
     public String rotate(String oldToken, String ip, String userAgent) {
         var rt = repo.findByToken(oldToken)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 리프레시 토큰"));
-        if (!rt.isActive()) throw new IllegalArgumentException("만료되었거나 폐기된 토큰");
+                .orElseThrow(() -> Errors.badRequest("유효하지 않은 리프레시 토큰"));
+        if (!rt.isActive()) throw Errors.badRequest("만료되었거나 폐기된 토큰");
 
         String newT = newTokenString();
         var next = RefreshToken.builder()

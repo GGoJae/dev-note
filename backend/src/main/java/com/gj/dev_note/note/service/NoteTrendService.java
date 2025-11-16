@@ -42,7 +42,7 @@ public class NoteTrendService {
     private List<TrendingNoteResponse> attachNotes(List<TrendingItem> items) {
         var out = new ArrayList<TrendingNoteResponse>(items.size());
         for (var it : items) {
-            var note = noteService.getNote(it.id());
+            var note = noteService.getNoteSummary(it.id());
             out.add(new TrendingNoteResponse(note, it.score));
         }
         return out;

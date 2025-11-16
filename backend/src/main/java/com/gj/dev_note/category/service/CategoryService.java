@@ -9,15 +9,14 @@ import com.gj.dev_note.category.request.CategoryCreateRequest;
 import com.gj.dev_note.category.request.CategoryPatchRequest;
 import com.gj.dev_note.category.response.CategoryDetail;
 import com.gj.dev_note.category.response.CategorySummary;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.domain.Role;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.note.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
 import java.util.*;
@@ -35,12 +34,13 @@ public class CategoryService {
 
     @Transactional
     public CategoryDetail create(Long actorId, CategoryCreateRequest req) {
-        if (req.scope() == null) throw badRequest("scope는 필수입니다.");
+        Objects.requireNonNull(actorId);
+
+        if (req.scope() == null) throw Errors.badRequest("scope는 필수입니다.");
         var scope = req.scope().toType();
 
         Member owner = null;
         if (scope == CategoryScope.PERSONAL) {
-            if (actorId == null) throw forbidden();
             owner = memberRepo.getReferenceById(actorId);
         } else { // GLOBAL
             ensureAdmin(actorId);
@@ -51,14 +51,14 @@ public class CategoryService {
             parent = loadAccessible(actorId, req.parentId());
             if (scope == CategoryScope.PERSONAL) {
                 if (parent.getScope() != CategoryScope.PERSONAL) {
-                    throw badRequest("개인 카테고리는 개인 카테고리 하위에만 생성할 수 있습니다.");
+                    throw Errors.badRequest("개인 카테고리는 개인 카테고리 하위에만 생성할 수 있습니다.");
                 }
                 if (!Objects.equals(parent.getOwner().getId(), actorId)) {
-                    throw forbidden();
+                    throw Errors.forbidden("해당 카테고리의 하위에 생성할 권한이 없습니다.");
                 }
             } else { // GLOBAL
                 if (parent.getScope() != CategoryScope.GLOBAL) {
-                    throw badRequest("글로벌 카테고리는 글로벌 카테고리 하위에만 생성할 수 있습니다.");
+                    throw Errors.badRequest("글로벌 카테고리는 글로벌 카테고리 하위에만 생성할 수 있습니다.");
                 }
             }
         }
@@ -91,7 +91,7 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public List<CategorySummary> myTree(Long actorId) {
-        if (actorId == null) throw forbidden();
+        Objects.requireNonNull(actorId);
         var rows = categoryRepo.findAllByOwnerIdOrderByNameAsc(actorId);
         return toTree(rows);
     }
@@ -151,7 +151,7 @@ public class CategoryService {
 
     @Transactional
     public CategoryDetail patch(Long actorId, Long categoryId, CategoryPatchRequest p) {
-        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> notFound(categoryId));
+        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> Errors.notFound("category-id", categoryId));
         ensureCanEdit(actorId, c);
 
         if (p.name() != null) {
@@ -180,14 +180,14 @@ public class CategoryService {
 
             Set<Long> subtree = treeService.resolveSubtreeIds(categoryId);
             if (subtree.contains(p.parentId())) {
-                throw badRequest("자기 자신 또는 하위 노드로 이동할 수 없습니다.");
+                throw Errors.badRequest("자기 자신 또는 하위 노드로 이동할 수 없습니다.");
             }
             if (c.getScope() != newParent.getScope()) {
-                throw badRequest("동일 스코프 간 이동만 가능합니다.");
+                throw Errors.badRequest("동일 스코프 간 이동만 가능합니다.");
             }
             if (c.getScope() == CategoryScope.PERSONAL &&
                     !Objects.equals(c.getOwner().getId(), newParent.getOwner().getId())) {
-                throw forbidden();
+                throw Errors.forbidden("해당 카테고리 하위에 생성할 권한이 없습니다.");
             }
             c.setParent(newParent);
         }
@@ -197,14 +197,14 @@ public class CategoryService {
 
     @Transactional
     public void delete(Long actorId, Long categoryId) {
-        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> notFound(categoryId));
+        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> Errors.notFound("category-id",categoryId));
         ensureCanEdit(actorId, c);
 
         if (categoryRepo.existsByParentId(categoryId)) {
-            throw badRequest("하위 카테고리가 있어 삭제할 수 없습니다.");
+            throw Errors.badRequest("하위 카테고리가 있어 삭제할 수 없습니다.");
         }
         if (noteRepo.existsByCategoryId(categoryId)) {
-            throw badRequest("노트에서 사용 중인 카테고리입니다.");
+            throw Errors.badRequest("노트에서 사용 중인 카테고리입니다.");
         }
         // TODO: quizRepo.existsByCategoryId(categoryId)
 
@@ -215,8 +215,8 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public Category loadAccessible(Long actorId, Long categoryId) {
-        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> notFound(categoryId));
-        if (!canAccess(actorId, c)) throw forbidden();
+        Category c = categoryRepo.findById(categoryId).orElseThrow(() -> Errors.notFound("category-id",categoryId));
+        if (!canAccess(actorId, c)) throw Errors.forbidden("해당 카테고리에 엑세스할 권한이 없습니다.");
         return c;
     }
 
@@ -238,26 +238,16 @@ public class CategoryService {
             return;
         }
         if (actorId == null || c.getOwner() == null || !Objects.equals(c.getOwner().getId(), actorId)) {
-            throw forbidden();
+            throw Errors.forbidden("해당 카테고리에 엑세스할 권한이 없습니다.");
         }
     }
 
     private void ensureAdmin(Long actorId) {
-        if (actorId == null) throw forbidden();
+        Objects.requireNonNull(actorId);
         var isAdmin = memberRepo.findById(actorId)
                 .map(m -> m.getRoles() != null && m.getRoles().contains(Role.ADMIN))
                 .orElse(false);
-        if (!isAdmin) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 허용됩니다.");
-    }
-
-    private ResponseStatusException notFound(Long id) {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND, "category not found: " + id);
-    }
-    private ResponseStatusException badRequest(String msg) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, msg);
-    }
-    private ResponseStatusException forbidden() {
-        return new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (!isAdmin) throw Errors.forbidden("관리자만 허용됩니다.");
     }
 
     private String slugify(String s) {
@@ -273,7 +263,7 @@ public class CategoryService {
             if (!categoryRepo.existsByOwnerIdAndSlug(ownerId, s)) return s;
             s = base + "-" + i;
         }
-        throw badRequest("슬러그 충돌이 과도합니다.");
+        throw Errors.badRequest("슬러그 충돌이 과도합니다.");
     }
     private String dedupGlobalSlug(String base) {
         String s = base;
@@ -281,6 +271,6 @@ public class CategoryService {
             if (!categoryRepo.existsByOwnerIsNullAndSlug(s)) return s;
             s = base + "-" + i;
         }
-        throw badRequest("슬러그 충돌이 과도합니다.");
+        throw Errors.badRequest("슬러그 충돌이 과도합니다.");
     }
 }

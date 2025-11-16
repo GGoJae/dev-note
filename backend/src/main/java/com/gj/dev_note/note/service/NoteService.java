@@ -4,6 +4,7 @@ import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.category.service.CategoryService;
 import com.gj.dev_note.common.PageEnvelope;
 import com.gj.dev_note.common.Visibility;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.note.domain.Note;
 import com.gj.dev_note.note.mapper.NoteMapper;
@@ -22,10 +23,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -62,19 +61,28 @@ public class NoteService {
             key = "'note:'+#id"
     )
     public NoteDetail getNote(Long id) {
-        Note note = noteRepo.findById(id).orElseThrow(() -> notFound(id));
-        if (!canView(CurrentUser.idOpt().orElse(null), note)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        Note note = noteRepo.findById(id).orElseThrow(() -> Errors.notFound("존재하지 않는 note ", id));
+        if (cannotView(CurrentUser.idOpt().orElse(null), note)) {
+            throw Errors.forbidden("해당 노트를 읽을 권한이 없습니다.");
         }
 
         return NoteMapper.toDetail(note);
+    }
+
+    public NoteSummary getNoteSummary(Long id) {
+        Note note = noteRepo.findById(id).orElseThrow(() -> Errors.notFound("note", id));
+        if (cannotView(CurrentUser.idOpt().orElse(null), note)) {
+            throw Errors.forbidden("해당 노트를 읽을 권한이 없습니다.");
+        }
+
+        return NoteMapper.toSummary(note);
     }
 
     @CacheEvict(cacheNames = {"allNote"}, allEntries = true)
     @Transactional
     public NoteDetail createNote(Long ownerId, NoteCreateRequest req) {
         var owner = memberRepo.findById(ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자: " + ownerId));
+                .orElseThrow(() -> Errors.notFound("존재하지 않는 사용자 ", ownerId));
 
         var category = categoryService.resolveForAssign(ownerId, req.categoryId());
 
@@ -99,7 +107,7 @@ public class NoteService {
 
     @Transactional
     public NoteDetail patchNote(Long actorId, Long noteId, NotePatchRequest patch, String ifMatch) {
-        Note note = noteRepo.findById(noteId).orElseThrow(() -> notFound(noteId));
+        Note note = noteRepo.findById(noteId).orElseThrow(() -> Errors.notFound("존재하지 않는 노트 ", noteId));
         ensureCanEdit(actorId, note);
         ensureVersion(ifMatch, note.getVersion());
 
@@ -116,7 +124,7 @@ public class NoteService {
 
     @Transactional
     public NoteDetail replaceTags(Long actorId, Long noteId, List<String> slugList, String ifMatch) {
-        Note note = noteRepo.findById(noteId).orElseThrow(() -> notFound(noteId));
+        Note note = noteRepo.findById(noteId).orElseThrow(() -> Errors.notFound("존재하지 않는 노트 ",noteId));
         ensureCanEdit(actorId, note);
         ensureVersion(ifMatch, note.getVersion());
 
@@ -133,7 +141,7 @@ public class NoteService {
     })
     @Transactional
     public void deleteNote(Long id) {
-        Note note = noteRepo.findById(id).orElseThrow(() -> notFound(id));
+        Note note = noteRepo.findById(id).orElseThrow(() -> Errors.notFound("존재하지 않는 노트 ", id));
         ensureCanEdit(CurrentUser.id(), note);
         noteRepo.delete(note);
     }
@@ -144,9 +152,13 @@ public class NoteService {
         return viewerId != null && Objects.equals(n.getOwner().getId(), viewerId);
     }
 
+    private boolean cannotView(Long viewerId, Note n) {
+        return !canView(viewerId, n);
+    }
+
     private void ensureCanEdit(Long actorId, Note n) {
         if (actorId == null || !Objects.equals(n.getOwner().getId(), actorId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            throw Errors.forbidden("해당 노트를 수정할 권한이 없습니다.");
         }
     }
 
@@ -166,7 +178,7 @@ public class NoteService {
 
     private long parseEtag(String ifMatch) {
         String s = ifMatch.replace("W/", "").replace("\"", "");
-        if (!s.startsWith("v")) throw new IllegalArgumentException("bad ETag");
+        if (!s.startsWith("v")) throw Errors.badRequest("bad ETag");
         return Long.parseLong(s.substring(1));
     }
 
@@ -179,7 +191,4 @@ public class NoteService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private ResponseStatusException notFound(Long id) {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND, "note not found: " + id);
-    }
 }

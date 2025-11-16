@@ -1,8 +1,9 @@
 package com.gj.dev_note.auth.service;
 
-import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.domain.EmailVerificationToken;
+import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.repository.EmailVerificationTokenRepository;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,8 +35,8 @@ public class EmailVerificationService {
     @Transactional
     public void verify(String token) {
         var t = tokenRepo.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 토큰"));
-        if (!t.isUsable()) throw new IllegalArgumentException("만료되었거나 사용된 토큰입니다.");
+                .orElseThrow(() -> Errors.badRequest("유효하지 않은 토큰"));
+        if (!t.isUsable()) throw Errors.badRequest("만료되었거나 사용된 토큰입니다.");
         t.getMember().setEmailVerifiedAt(Instant.now());
         t.setUsedAt(Instant.now());
     }

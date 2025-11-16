@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.gj.dev_note.category.domain.CategoryScope;
 import com.gj.dev_note.common.enums.EnumDto;
+import com.gj.dev_note.common.error.Errors;
 
 public enum CategoryScopeDto implements EnumDto<CategoryScope, CategoryScopeDto> {
     GLOBAL("global", "글로벌", CategoryScope.GLOBAL),
@@ -46,6 +47,6 @@ public enum CategoryScopeDto implements EnumDto<CategoryScope, CategoryScopeDto>
 
     public static CategoryScopeDto fromType(CategoryScope type) {
         for (var v : values()) if (v.domain == type) return v;
-        throw new IllegalArgumentException("지원하지 않는 도메인 타입 : " + type);
+        throw Errors.badRequest("지원하지 않는 도메인 타입 : " + type);
     }
 }

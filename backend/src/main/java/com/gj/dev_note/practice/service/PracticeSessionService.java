@@ -49,7 +49,7 @@ public class PracticeSessionService {
         FeedbackMode feedbackMode = req.feedbackMode().toType();
 
         List<Quiz> quizzes = quizRepo.findAllById(req.quizIds());
-        if (quizzes.isEmpty()) throw new IllegalArgumentException("퀴즈를 찾을 수 없습니다.");
+        if (quizzes.isEmpty()) throw Errors.notFound("quiz", req.quizIds());
 
         // TODO 접근 권한 필터링 하기
 
@@ -243,11 +243,11 @@ public class PracticeSessionService {
         Long me = CurrentUser.id();
         PracticeSession s = requireSessionOwned(sessionId, me);
         if (s.getFeedbackMode() == FeedbackMode.UNTIL_CORRECT) {
-            throw new IllegalArgumentException("해당 모드에서는 pass를 허용하지 않습니다.");
+            throw Errors.badRequest("해당 모드에서는 pass를 허용하지 않습니다.");
         }
 
         PracticeSessionItem item = itemRepo.findByIdAndSessionId(sessionItemId, sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션 아이템을 찾을 수 없습니다."));
+                .orElseThrow(() -> Errors.notFound("session-item", sessionItemId));
 
         // 이미 시도있으면 스킵 기록 생략 가능. 여기선 "pass 기록"을 남겨 재개 시 포인터가 전진되도록.
         Member ownerRef = memberRepo.getReferenceById(me);
@@ -272,11 +272,11 @@ public class PracticeSessionService {
         Long me = CurrentUser.id();
 
         PracticeSessionItem item = itemRepo.findByIdAndSessionId(req.sessionItemId(), sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션 아이템을 찾을 수 없습니다."));
+                .orElseThrow(() -> Errors.notFound("session-item", req.sessionItemId()));
 
         PracticeSession session = item.getSession();
         if (!Objects.equals(session.getOwner().getId(), me))
-            throw new IllegalArgumentException("세션 소유자가 아닙니다.");
+            throw Errors.forbidden("세션 소유자가 아닙니다.");
 
         var quiz = item.getQuiz();
         Set<Long> correctSet = quiz.getChoices().stream()
@@ -304,7 +304,7 @@ public class PracticeSessionService {
                             .choice(quiz.getChoices().stream()
                                     .filter(c -> Objects.equals(c.getId(), cid))
                                     .findFirst()
-                                    .orElseThrow(() -> new IllegalArgumentException("choice 불일치")))
+                                    .orElseThrow(() -> Errors.notFound("choice", cid)))
                             .build())
                     .toList();
             attemptChoiceRepo.saveAll(ac);
@@ -336,13 +336,14 @@ public class PracticeSessionService {
         Long me = CurrentUser.id();
 
         PracticeSession session = sessionRepo.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션 없음"));
-        if (!Objects.equals(session.getOwner().getId(), me))
-            throw new IllegalArgumentException("세션 소유자가 아닙니다.");
+                .orElseThrow(() -> Errors.notFound("session", sessionId));
+        if (!Objects.equals(session.getOwner().getId(), me)) {
+            throw Errors.forbidden("세션 소유자가 아닙니다.");
+        }
 
         // 토큰 검증
         if (!session.canUseFinalizeToken(req.token(), Instant.now())) {
-            throw new IllegalArgumentException("finalize 토큰이 유효하지 않습니다.");
+            throw Errors.badRequest("finalize 토큰이 유효하지 않습니다.");
         }
 
         if (!session.isFinalized()) session.setFinalizedAt(Instant.now());
@@ -390,10 +391,11 @@ public class PracticeSessionService {
 
     private PracticeSession requireSessionOwned(Long sessionId, Long me) {
         PracticeSession s = sessionRepo.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션 없음"));
-        if (s.getExpiresAt().isBefore(Instant.now())) throw new IllegalStateException("세션 유효 시간이 만료 되었습니다.");
-        if (!Objects.equals(s.getOwner().getId(), me))
-            throw new IllegalArgumentException("세션 소유자가 아닙니다.");
+                .orElseThrow(() -> Errors.badRequest("세션 없음"));
+        if (s.getExpiresAt().isBefore(Instant.now())) throw Errors.badRequest("세션 유효 시간이 만료 되었습니다.");
+        if (!Objects.equals(s.getOwner().getId(), me)) {
+            throw Errors.forbidden("세션 소유자가 아닙니다.");
+        }
         return s;
     }
 }
