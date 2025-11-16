@@ -384,10 +384,12 @@ public class PracticeSessionService {
     }
 
     /*----------------- 공통 -----------------*/
+    // TODO 예외 정리하기
 
     private PracticeSession requireSessionOwned(Long sessionId, Long me) {
         PracticeSession s = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("세션 없음"));
+        if (s.getExpiresAt().isBefore(Instant.now())) throw new IllegalStateException("세션 유효 시간이 만료 되었습니다.");
         if (!Objects.equals(s.getOwner().getId(), me))
             throw new IllegalArgumentException("세션 소유자가 아닙니다.");
         return s;
