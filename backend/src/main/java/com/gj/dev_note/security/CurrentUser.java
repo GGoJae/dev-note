@@ -23,6 +23,10 @@ public final class CurrentUser {
         return Optional.empty();
     }
 
+    public static Long idOrNull() {
+        return idOpt().orElse(null);
+    }
+
     public static Long id() {
         return idOpt().orElseThrow(() -> new AuthenticationCredentialsNotFoundException("인증되지 않음"));
     }

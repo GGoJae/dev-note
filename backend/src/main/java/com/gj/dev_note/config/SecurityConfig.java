@@ -59,6 +59,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/notes/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/quiz-sets/**").permitAll()
                 .anyRequest().authenticated());
 
         http.oauth2ResourceServer(oauth2 -> oauth2
