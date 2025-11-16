@@ -2,9 +2,7 @@ package com.gj.dev_note.auth.service;
 
 import com.gj.dev_note.auth.request.LoginRequest;
 import com.gj.dev_note.auth.response.AuthResponse;
-import com.gj.dev_note.common.exception.exceptions.AccountLockedException;
-import com.gj.dev_note.common.exception.exceptions.BadRequestException;
-import com.gj.dev_note.common.exception.exceptions.InvalidCredentialsException;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.domain.MemberStatus;
 import com.gj.dev_note.member.repository.MemberRepository;
@@ -34,14 +32,19 @@ public class AuthService {
     @Transactional
     public AuthResponse login(LoginRequest req, HttpServletRequest http) {
         String email = normalizeEmail(req.email());
-        Member m = memberRepo.findByEmail(email).orElseThrow(InvalidCredentialsException::new);
+        Member m = memberRepo.findByEmail(email).orElseThrow(Errors::invalidCredential);
 
-        if (m.getStatus() != MemberStatus.ACTIVE) throw new BadRequestException("활성화되지 않은 계정입니다.");
-        if (m.isLockedNow()) throw new AccountLockedException(String.valueOf(m.getLockUntil()));
+        if (m.getStatus() != MemberStatus.ACTIVE){
+            throw Errors.badRequest("활성화되지 않은 계정입니다.");
+        }
+
+        if (m.isLockedNow()){
+            throw Errors.forbidden("계정이 잠겼습니다. 해제 시간 " + m.getLockUntil());
+        }
 
         if (!passwordEncoder.matches(req.password(), m.getPasswordHash())) {
             m.onLoginFail(LOCK_THRESHOLD, LOCK_MINUTES);
-            throw new InvalidCredentialsException();
+            throw Errors.invalidCredential();
         }
         m.onLoginSuccess();
 

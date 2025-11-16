@@ -1,7 +1,7 @@
 package com.gj.dev_note.member.service;
 
 import com.gj.dev_note.auth.request.SignupRequest;
-import com.gj.dev_note.common.exception.exceptions.EmailAlreadyUsedException;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.domain.MemberStatus;
 import com.gj.dev_note.member.domain.Role;
@@ -24,7 +24,7 @@ public class MemberService {
     public Member register(SignupRequest req) {
         String email = normalizeEmail(req.email());
         if (memberRepo.existsByEmail(email)) {
-            throw new EmailAlreadyUsedException(email);
+            throw Errors.emailTaken(email);
         }
         Member m = Member.builder()
                 .email(email)

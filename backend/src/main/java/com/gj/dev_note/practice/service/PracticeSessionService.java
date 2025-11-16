@@ -1,10 +1,12 @@
 package com.gj.dev_note.practice.service;
 
-import com.gj.dev_note.common.exception.exceptions.DumbDeveloperException;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
 import com.gj.dev_note.practice.domain.*;
-import com.gj.dev_note.practice.dto.*;
+import com.gj.dev_note.practice.dto.NextHint;
+import com.gj.dev_note.practice.dto.ProgressSummary;
+import com.gj.dev_note.practice.dto.WindowItem;
 import com.gj.dev_note.practice.mapper.PracticeMapper;
 import com.gj.dev_note.practice.repository.*;
 import com.gj.dev_note.practice.request.AnswerSubmitRequest;
@@ -67,7 +69,7 @@ public class PracticeSessionService {
         ordered = ordered.subList(0, limit);
 
         Member owner = memberRepo.findById(me)
-                .orElseThrow(DumbDeveloperException::new);
+                .orElseThrow(Errors::internal);
 
         PracticeSession session = PracticeSession.builder()
                 .owner(owner)

@@ -1,10 +1,10 @@
 package com.gj.dev_note.auth.service;
 
-import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.domain.PasswordResetToken;
+import com.gj.dev_note.auth.properties.AuthTokenProperties;
 import com.gj.dev_note.auth.repository.PasswordResetTokenRepository;
 import com.gj.dev_note.auth.repository.RefreshTokenRepository;
-import com.gj.dev_note.common.exception.exceptions.InvalidCredentialsException;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +48,8 @@ public class PasswordResetService {
     @Transactional
     public void reset(String token, String newPassword) {
         var prt = tokenRepo.findByToken(token)
-                .orElseThrow(InvalidCredentialsException::new);
-        if (!prt.isUsable()) throw new InvalidCredentialsException();
+                .orElseThrow(Errors::invalidCredential);
+        if (!prt.isUsable()) throw Errors.invalidCredential();
 
         var m = prt.getMember();
         m.setPasswordHash(encoder.encode(newPassword));
