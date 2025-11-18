@@ -5,7 +5,6 @@ import com.gj.dev_note.common.VisibilityDto;
 public record QuizSetPatchRequest(
         String name,
         String description,
-        VisibilityDto visibility,
-        Long categoryId
+        VisibilityDto visibility
 ) {
 }

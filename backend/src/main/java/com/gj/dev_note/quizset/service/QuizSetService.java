@@ -38,18 +38,14 @@ public class QuizSetService {
     private final QuizSetItemRepository itemRepo;
     private final QuizRepository quizRepo;
     private final MemberRepository memberRepo;
-    private final CategoryService categoryService;
 
     @Transactional
     public QuizSetDetail create(QuizSetCreateRequest req) {
         Long me = CurrentUser.id();
         Member owner = memberRepo.findById(me).orElseThrow(Errors::internal);
 
-        Category cat = categoryService.resolveForAssign(me, req.categoryId());
-
         QuizSet qs = QuizSet.builder()
                 .owner(owner)
-                .category(cat)
                 .name(req.name().trim())
                 .description(req.description())
                 .visibility(req.visibility() == null ? Visibility.PRIVATE : req.visibility().toType())
@@ -91,11 +87,6 @@ public class QuizSetService {
         if (req.name() != null) qs.setName(req.name().trim());
         if (req.description() != null) qs.setDescription(req.description());
         if (req.visibility() != null) qs.setVisibility(req.visibility().toType());
-
-        if (req.categoryId() != null) {
-            var c = categoryService.resolveForAssign(me, req.categoryId());
-            qs.setCategory(c);
-        }
 
         var first = firstPageItems(setId);
         Integer next = (qs.getItemCount() > first.size()) ? first.size() : null;

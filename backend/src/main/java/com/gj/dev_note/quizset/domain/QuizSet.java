@@ -1,6 +1,5 @@
 package com.gj.dev_note.quizset.domain;
 
-import com.gj.dev_note.category.domain.Category;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.member.domain.Member;
 import jakarta.persistence.*;
@@ -14,7 +13,6 @@ import java.time.Instant;
 @Table(name = "quiz_set", indexes = {
         @Index(name = "idx_qs_owner", columnList = "owner_id"),
         @Index(name = "idx_qs_visibility", columnList = "visibility"),
-        @Index(name = "idx_qs_category", columnList = "category_id"),
         @Index(name = "idx_qs_created", columnList = "createdAt")
 })
 @Getter @Setter
@@ -28,10 +26,6 @@ public class QuizSet {
     @ManyToOne(fetch=FetchType.LAZY, optional=false)
     @JoinColumn(name="owner_id", nullable=false)
     private Member owner;
-
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="category_id")
-    private Category category;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable=false, length=20)

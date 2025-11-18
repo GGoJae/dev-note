@@ -7,7 +7,6 @@ public record QuizSetCreateRequest(
         @NotBlank
         String name,
         String description,
-        VisibilityDto visibility,
-        Long categoryId
+        VisibilityDto visibility
 ) {
 }

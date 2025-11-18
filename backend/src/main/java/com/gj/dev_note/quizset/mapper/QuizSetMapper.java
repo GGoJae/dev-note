@@ -47,7 +47,7 @@ public final class QuizSetMapper {
                 it.getId(),
                 it.getQuiz().getId(),
                 it.getOrderIndex(),
-                it.getAliasTitle(),
+                it.getMemo(),
                 it.isPinned(),
                 it.getWeight()
         );

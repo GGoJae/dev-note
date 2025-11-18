@@ -7,7 +7,6 @@ import com.gj.dev_note.quizset.response.QuizSetSummary;
 import com.gj.dev_note.quizset.service.QuizSetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.type.internal.UserTypeJavaTypeWrapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,7 +25,7 @@ public class QuizSetApi {
         return service.create(req);
     }
 
-    @GetMapping("/me")
+    @GetMapping
     public List<QuizSetSummary> mySets() {
         return service.mySets();
     }
@@ -42,7 +41,7 @@ public class QuizSetApi {
         service.delete(setId);
     }
 
-    @PostMapping("/{setId}/items:add")
+    @PostMapping("/{setId}/items")
     public QuizSetDetail addQuizzes(@PathVariable Long setId,
                                     @Valid @RequestBody AddQuizzesRequest req) {
         return service.addQuizzes(setId, req);
@@ -54,13 +53,13 @@ public class QuizSetApi {
         return service.pageItems(setId, offset);
     }
 
-    @PostMapping("/{setId}/items:reorder")
+    @PatchMapping("/{setId}/items/order")
     public QuizSetDetail reorder(@PathVariable Long setId,
                                  @Valid @RequestBody ReorderRequest req) {
         return service.reorder(setId, req);
     }
 
-    @PostMapping("/{setId}/items:remove")
+    @DeleteMapping("/{setId}/items/{itemId}")
     public QuizSetDetail remove(@PathVariable Long setId,
                                 @Valid @RequestBody RemoveItemsRequest req) {
         return service.removeItems(setId, req);

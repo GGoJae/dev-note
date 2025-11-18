@@ -4,7 +4,7 @@ public record QuizSetItemSummary(
         Long itemId,
         Long quizId,
         int orderIndex,
-        String aliasTitle,
+        String memo,
         boolean pinned,
         int weight
 ) {

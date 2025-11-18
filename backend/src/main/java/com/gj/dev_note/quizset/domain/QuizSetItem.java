@@ -43,7 +43,7 @@ public class QuizSetItem {
     private Instant addedAt;
 
     @Column(length=200)
-    private String aliasTitle;
+    private String memo;
 
     @Column(nullable=false)
     @Builder.Default
