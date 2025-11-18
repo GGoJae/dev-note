@@ -1,7 +1,5 @@
 package com.gj.dev_note.quizset.service;
 
-import com.gj.dev_note.category.domain.Category;
-import com.gj.dev_note.category.service.CategoryService;
 import com.gj.dev_note.common.Visibility;
 import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;

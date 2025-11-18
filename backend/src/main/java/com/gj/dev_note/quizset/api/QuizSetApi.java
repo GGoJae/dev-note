@@ -59,9 +59,10 @@ public class QuizSetApi {
         return service.reorder(setId, req);
     }
 
-    @DeleteMapping("/{setId}/items/{itemId}")
+    @DeleteMapping("/{setId}/items")
     public QuizSetDetail remove(@PathVariable Long setId,
                                 @Valid @RequestBody RemoveItemsRequest req) {
         return service.removeItems(setId, req);
     }
+
 }
