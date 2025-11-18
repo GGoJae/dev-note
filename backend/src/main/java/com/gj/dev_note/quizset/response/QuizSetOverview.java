@@ -5,7 +5,7 @@ import com.gj.dev_note.common.VisibilityDto;
 import java.time.Instant;
 import java.util.List;
 
-public record QuizSetDetail(
+public record QuizSetOverview(
         Long id,
         Long ownerId,
         String name,
@@ -14,7 +14,7 @@ public record QuizSetDetail(
         Integer itemCount,
         Instant createdAt,
         Instant updatedAt,
-        List<QuizSetItemSummary> firstItems,
+        List<QuizSetItemPreview> firstItems,
         Integer nextOffset
 ) {
 }

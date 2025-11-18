@@ -3,7 +3,7 @@ package com.gj.dev_note.quizset.response;
 import java.util.List;
 
 public record QuizSetItemsPage(
-        List<QuizSetItemSummary> items,
+        List<QuizSetItemPreview> items,
         Integer nextOffset
 ) {
 }

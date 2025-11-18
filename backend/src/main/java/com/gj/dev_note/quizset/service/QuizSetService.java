@@ -12,9 +12,9 @@ import com.gj.dev_note.quizset.mapper.QuizSetMapper;
 import com.gj.dev_note.quizset.repository.QuizSetItemRepository;
 import com.gj.dev_note.quizset.repository.QuizSetRepository;
 import com.gj.dev_note.quizset.request.*;
-import com.gj.dev_note.quizset.response.QuizSetDetail;
+import com.gj.dev_note.quizset.response.QuizSetOverview;
 import com.gj.dev_note.quizset.response.QuizSetItemsPage;
-import com.gj.dev_note.quizset.response.QuizSetSummary;
+import com.gj.dev_note.quizset.response.QuizSetPreview;
 import com.gj.dev_note.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class QuizSetService {
     private final MemberRepository memberRepo;
 
     @Transactional
-    public QuizSetDetail create(QuizSetCreateRequest req) {
+    public QuizSetOverview create(QuizSetCreateRequest req) {
         Long me = CurrentUser.id();
         Member owner = memberRepo.findById(me).orElseThrow(Errors::internal);
 
@@ -56,7 +56,7 @@ public class QuizSetService {
     }
 
     @Transactional(readOnly = true)
-    public List<QuizSetSummary> mySets() {
+    public List<QuizSetPreview> mySets() {
         Long me = CurrentUser.id();
         return setRepo.findAllByOwnerIdOrderByCreatedAtDesc(me).stream()
                 .map(QuizSetMapper::toSummary)
@@ -64,7 +64,7 @@ public class QuizSetService {
     }
 
     @Transactional(readOnly = true)
-    public QuizSetDetail get(Long setId) {
+    public QuizSetOverview get(Long setId) {
         Long me = CurrentUser.idOrNull();
         QuizSet qs = setRepo.findById(setId).orElseThrow(() -> Errors.notFound("quiz-set", setId));
 
@@ -77,7 +77,7 @@ public class QuizSetService {
     }
 
     @Transactional
-    public QuizSetDetail patch(Long setId, QuizSetPatchRequest req) {
+    public QuizSetOverview patch(Long setId, QuizSetPatchRequest req) {
         Long me = CurrentUser.id();
         QuizSet qs = setRepo.findById(setId).orElseThrow(() -> Errors.notFound("quiz-set", setId));
         ensureOwner(me, qs);
@@ -102,7 +102,7 @@ public class QuizSetService {
     }
 
     @Transactional
-    public QuizSetDetail addQuizzes(Long setId, AddQuizzesRequest req) {
+    public QuizSetOverview addQuizzes(Long setId, AddQuizzesRequest req) {
         Long me = CurrentUser.id();
         QuizSet qs = setRepo.findById(setId).orElseThrow(() -> Errors.notFound("quiz-set", setId));
         ensureOwner(me, qs);
@@ -152,7 +152,7 @@ public class QuizSetService {
     }
 
     @Transactional
-    public QuizSetDetail reorder(Long setId, ReorderRequest req) {
+    public QuizSetOverview reorder(Long setId, ReorderRequest req) {
         Long me = CurrentUser.id();
         QuizSet qs = setRepo.findById(setId).orElseThrow(() -> Errors.notFound("quiz-set", setId));
         ensureOwner(me, qs);
@@ -181,7 +181,7 @@ public class QuizSetService {
     }
 
     @Transactional
-    public QuizSetDetail removeItems(Long setId, RemoveItemsRequest req) {
+    public QuizSetOverview removeItems(Long setId, RemoveItemsRequest req) {
         Long me = CurrentUser.id();
         QuizSet qs = setRepo.findById(setId).orElseThrow(() -> Errors.notFound("quiz-set", setId));
         ensureOwner(me, qs);

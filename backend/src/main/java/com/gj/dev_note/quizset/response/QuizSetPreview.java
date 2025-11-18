@@ -4,7 +4,7 @@ import com.gj.dev_note.common.VisibilityDto;
 
 import java.time.Instant;
 
-public record QuizSetSummary(
+public record QuizSetPreview(
         Long id,
         Long ownerId,
         String name,

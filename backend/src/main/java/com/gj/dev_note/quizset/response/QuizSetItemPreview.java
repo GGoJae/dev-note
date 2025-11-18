@@ -1,6 +1,6 @@
 package com.gj.dev_note.quizset.response;
 
-public record QuizSetItemSummary(
+public record QuizSetItemPreview(
         Long itemId,
         Long quizId,
         int orderIndex,

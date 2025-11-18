@@ -3,9 +3,9 @@ package com.gj.dev_note.quizset.mapper;
 import com.gj.dev_note.common.VisibilityDto;
 import com.gj.dev_note.quizset.domain.QuizSet;
 import com.gj.dev_note.quizset.domain.QuizSetItem;
-import com.gj.dev_note.quizset.response.QuizSetDetail;
-import com.gj.dev_note.quizset.response.QuizSetItemSummary;
-import com.gj.dev_note.quizset.response.QuizSetSummary;
+import com.gj.dev_note.quizset.response.QuizSetOverview;
+import com.gj.dev_note.quizset.response.QuizSetItemPreview;
+import com.gj.dev_note.quizset.response.QuizSetPreview;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -14,8 +14,8 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class QuizSetMapper {
 
-    public static QuizSetSummary toSummary(QuizSet s) {
-        return new QuizSetSummary(
+    public static QuizSetPreview toSummary(QuizSet s) {
+        return new QuizSetPreview(
                 s.getId(),
                 s.getOwner().getId(),
                 s.getName(),
@@ -27,8 +27,8 @@ public final class QuizSetMapper {
         );
     }
 
-    public static QuizSetDetail toDetail(QuizSet s, List<QuizSetItemSummary> first, Integer nextOffset) {
-        return new QuizSetDetail(
+    public static QuizSetOverview toDetail(QuizSet s, List<QuizSetItemPreview> first, Integer nextOffset) {
+        return new QuizSetOverview(
                 s.getId(),
                 s.getOwner().getId(),
                 s.getName(),
@@ -42,8 +42,8 @@ public final class QuizSetMapper {
         );
     }
 
-    public static QuizSetItemSummary toItemSummary(QuizSetItem it) {
-        return new QuizSetItemSummary(
+    public static QuizSetItemPreview toItemSummary(QuizSetItem it) {
+        return new QuizSetItemPreview(
                 it.getId(),
                 it.getQuiz().getId(),
                 it.getOrderIndex(),
@@ -53,7 +53,7 @@ public final class QuizSetMapper {
         );
     }
 
-    public static List<QuizSetItemSummary> toItemSummaries(List<QuizSetItem> rows) {
+    public static List<QuizSetItemPreview> toItemSummaries(List<QuizSetItem> rows) {
         return rows.stream().map(QuizSetMapper::toItemSummary).toList();
     }
 }
