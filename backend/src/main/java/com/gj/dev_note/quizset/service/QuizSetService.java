@@ -17,13 +17,12 @@ import com.gj.dev_note.quizset.response.QuizSetItemsPage;
 import com.gj.dev_note.quizset.response.QuizSetPreview;
 import com.gj.dev_note.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -148,13 +147,26 @@ public class QuizSetService {
         if (!canRead(me, qs)) throw Errors.forbidden("세트 열람 권한이 없습니다.");
 
         int off = (offset == null || offset < 0) ? 0 : offset;
-        var rows = itemRepo.findAllBySetIdOrderByOrderIndexAscIdAsc(setId);
-        int end = Math.min(off + PAGE_SIZE, rows.size());
-        var slice = rows.subList(off, end);
 
-        Integer next = (end < rows.size()) ? end : null;
+        int page = off / PAGE_SIZE;
+        int startInPage = off % PAGE_SIZE;
 
-        return new QuizSetItemsPage(QuizSetMapper.toItemSummaries(slice), next);
+        var sort = Sort.by(Sort.Order.asc("orderIndex"), Sort.Order.asc("id"));
+        var pageReq = PageRequest.of(page, PAGE_SIZE, sort);
+        var pageResult = itemRepo.findBySetId(setId, pageReq);
+
+        var content = pageResult.getContent();
+        if (startInPage > 0 && startInPage < content.size()) {
+            content = content.subList(startInPage, content.size());
+        } else if (startInPage >= content.size()) {
+            content = List.of();
+        }
+
+        var summaries = QuizSetMapper.toItemSummaries(content);
+        int returned = summaries.size();
+        Integer next = pageResult.hasNext() ? (off + returned) : null;
+
+        return new QuizSetItemsPage(summaries, next);
     }
 
     @Transactional
@@ -166,17 +178,18 @@ public class QuizSetService {
         var all = itemRepo.findAllBySetIdOrderByOrderIndexAscIdAsc(setId);
         if (all.isEmpty()) return get(setId);
 
-        Set<Long> currentIds = all.stream().map(QuizSetItem::getId).collect(Collectors.toSet());
-        Set<Long> incoming = new LinkedHashSet<>(req.itemIdsInOrder());
+        Map<Long, QuizSetItem> byId = all.stream()
+                .collect(Collectors.toMap(QuizSetItem::getId, it -> it));
 
+        Set<Long> currentIds = byId.keySet();
+        Set<Long> incoming = new LinkedHashSet<>(req.itemIdsInOrder());
         if (!currentIds.equals(incoming)) {
             throw Errors.badRequest("세트 아이템 전체와 동일한 집합이어야 재정렬할 수 있습니다.");
         }
 
         int idx = 0;
         for (Long id : incoming) {
-            var it = all.stream().filter(x -> Objects.equals(x.getId(), id)).findFirst()
-                    .orElseThrow();
+            QuizSetItem it = byId.get(id);
             it.setOrderIndex(idx++);
         }
 
