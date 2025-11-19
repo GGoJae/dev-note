@@ -108,6 +108,12 @@ public class QuizSetService {
         ensureOwner(me, qs);
 
         List<Quiz> quizzes = req.quizIds().isEmpty() ? List.of() : quizRepo.findAllById(req.quizIds());
+        for (Quiz quiz : quizzes) {
+            if (quiz.getVisibility() == Visibility.PUBLIC) continue;
+            if (!quiz.getOwner().getId().equals(me)) {
+                throw Errors.forbidden("카드를 읽을 권한이 없습니다.");
+            }
+        }
         if (quizzes.isEmpty()) return get(setId);
 
         int startIdx = (int) itemRepo.countBySetId(setId);
@@ -207,12 +213,14 @@ public class QuizSetService {
 
 
     private void ensureOwner(Long me, QuizSet s) {
+        // TODO n + 1 지점/
         if (me == null || !Objects.equals(s.getOwner().getId(), me)) {
             throw Errors.forbidden("세트 소유자가 아닙니다.");
         }
     }
 
     private boolean canRead(Long me, QuizSet s) {
+        // TODO n + 1 지점/
         if (s.getVisibility() == Visibility.PUBLIC) return true;
         return me != null && Objects.equals(s.getOwner().getId(), me);
     }
