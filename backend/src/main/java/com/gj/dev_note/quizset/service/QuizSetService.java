@@ -226,14 +226,12 @@ public class QuizSetService {
 
 
     private void ensureOwner(Long me, QuizSet s) {
-        // TODO n + 1 지점/
         if (me == null || !Objects.equals(s.getOwner().getId(), me)) {
             throw Errors.forbidden("세트 소유자가 아닙니다.");
         }
     }
 
     private boolean canRead(Long me, QuizSet s) {
-        // TODO n + 1 지점/
         if (s.getVisibility() == Visibility.PUBLIC) return true;
         return me != null && Objects.equals(s.getOwner().getId(), me);
     }
