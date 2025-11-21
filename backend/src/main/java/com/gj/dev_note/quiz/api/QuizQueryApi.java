@@ -1,6 +1,8 @@
 package com.gj.dev_note.quiz.api;
 
 import com.gj.dev_note.quiz.dto.QuizLite;
+import com.gj.dev_note.quiz.dto.QuizPlayView;
+import com.gj.dev_note.quiz.request.QuizCreateRequest;
 import com.gj.dev_note.quiz.request.QuizLiteBatchRequest;
 import com.gj.dev_note.quiz.service.QuizQueryService;
 import jakarta.validation.Valid;
@@ -25,4 +27,5 @@ public class QuizQueryApi {
     public QuizLite liteOne(@PathVariable Long quizId) {
         return service.getLite(quizId);
     }
+
 }

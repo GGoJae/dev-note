@@ -22,7 +22,7 @@ public class QuizChoice {
     @Column(nullable=false, length=300)
     private String text;
 
-    @Column(nullable=false) @Builder.Default
+    @Column(nullable=false)
     private boolean correct = false;
 
     @Column(nullable=false)

@@ -1,10 +1,12 @@
 package com.gj.dev_note.quiz.service;
 
 import com.gj.dev_note.common.Visibility;
+import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.quiz.domain.Quiz;
 import com.gj.dev_note.quiz.domain.QuizChoice;
 import com.gj.dev_note.quiz.dto.QuizChoiceLite;
 import com.gj.dev_note.quiz.dto.QuizLite;
+import com.gj.dev_note.quiz.mapper.QuizMapper;
 import com.gj.dev_note.quiz.repository.QuizChoiceRepository;
 import com.gj.dev_note.quiz.repository.QuizRepository;
 import com.gj.dev_note.quiz.request.QuizLiteBatchRequest;
@@ -24,6 +26,7 @@ public class QuizQueryService {
     private final QuizRepository quizRepo;
     private final QuizChoiceRepository choiceRepo;
 
+
     @Transactional(readOnly = true)
     public List<QuizLite> getLiteBatch(QuizLiteBatchRequest req) {
         List<Long> distinctIds = req.ids().stream().distinct().toList();
@@ -41,10 +44,9 @@ public class QuizQueryService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (readableIds.isEmpty()) return List.of();
 
-        List<QuizChoice> allChoices = choiceRepo.findAllByQuizIdIn(readableIds);
+        List<QuizChoice> allChoices = choiceRepo.findAllByQuizIdInOrderByQuizIdAscDisplayOrderAscIdAsc(readableIds);
         Map<Long, List<QuizChoice>> choicesByQuizId = allChoices.stream()
-                .collect(Collectors.groupingBy(ch -> ch.getQuiz().getId(),
-                        LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(ch -> ch.getQuiz().getId(), LinkedHashMap::new, Collectors.toList()));
 
         List<QuizLite> out = new ArrayList<>(readableIds.size());
         for (Long id : distinctIds) {
@@ -73,27 +75,19 @@ public class QuizQueryService {
     @Transactional(readOnly = true)
     public QuizLite getLite(Long quizId) {
         Long me = CurrentUser.idOrNull();
-        Quiz q = quizRepo.findById(quizId).orElse(null);
-        if (q == null || !canRead(me, q)) return null;
+        Quiz q = quizRepo.findById(quizId).orElseThrow(() -> Errors.notFound("quiz", quizId));
+        if (!canRead(me, q)) throw Errors.forbidden("quiz를 읽을 권한이 없습니다.");
 
-        List<QuizChoice> chs = choiceRepo.findAllByQuizIdIn(List.of(quizId));
-        List<QuizChoiceLite> liteChoices = chs.stream()
-                .map(c -> new QuizChoiceLite(c.getId(), c.getText()))
+        List<QuizChoiceLite> LiteChoices = choiceRepo.findAllByQuizIdOrderByDisplayOrderAscIdAsc(quizId).stream()
+                .map(QuizMapper::toChoiceLite)
                 .toList();
 
-        return new QuizLite(
-                q.getId(),
-                q.getOwner().getId(),
-                q.getQuestion(),
-                q.getDifficulty(),
-                liteChoices,
-                q.getCreatedAt(),
-                q.getUpdatedAt()
-        );
+        return QuizMapper.toLite(q, LiteChoices);
     }
 
     private boolean canRead(Long me, Quiz q) {
         if (q.getVisibility() == Visibility.PUBLIC) return true;
         return me != null && Objects.equals(q.getOwner().getId(), me);
     }
+
 }
