@@ -3,11 +3,12 @@ package com.gj.dev_note.quiz.service;
 import com.gj.dev_note.common.error.Errors;
 import com.gj.dev_note.member.domain.Member;
 import com.gj.dev_note.member.repository.MemberRepository;
-import com.gj.dev_note.quiz.domain.AnswerPolicy;
 import com.gj.dev_note.quiz.domain.Quiz;
 import com.gj.dev_note.quiz.domain.QuizChoice;
 import com.gj.dev_note.quiz.dto.AnswerPolicyDto;
+import com.gj.dev_note.quiz.dto.QuizChoiceLite;
 import com.gj.dev_note.quiz.dto.QuizPlayView;
+import com.gj.dev_note.quiz.mapper.QuizChoiceMapper;
 import com.gj.dev_note.quiz.mapper.QuizMapper;
 import com.gj.dev_note.quiz.repository.QuizRepository;
 import com.gj.dev_note.quiz.request.QuizCreateRequest;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -59,7 +61,11 @@ public class QuizCommandService {
         // TODO tag 맵핑하는 로직 작성
 
         Quiz saved = quizRepo.save(build);
-        return QuizMapper.toPlayView(saved);
+        List<QuizChoiceLite> choiceLites = saved.getChoices().stream()
+                .sorted(Comparator.comparing(QuizChoice::getDisplayOrder).thenComparing(QuizChoice::getId))
+                .map(QuizChoiceMapper::toLite).toList();
+
+        return QuizMapper.toPlayView(saved, choiceLites);
     }
 
     private void validateAnswerPolicy(AnswerPolicyDto policy, List<QuizCreateRequest.QuizChoiceCreateRequest> choices) {

@@ -14,33 +14,26 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class QuizMapper {
 
-    public static QuizLite toLite(Quiz quiz, List<QuizChoiceLite> choicesLite) {
+    public static QuizLite toLite(Quiz quiz, List<QuizChoiceLite> choiceLites) {
         return new QuizLite(
                 quiz.getId(),
                 quiz.getOwner().getId(),
                 quiz.getQuestion(),
                 quiz.getDifficulty(),
-                choicesLite,
+                choiceLites,
                 quiz.getCreatedAt(),
                 quiz.getUpdatedAt()
         );
     }
 
-    public static QuizChoiceLite toChoiceLite(QuizChoice quizChoice) {
-        return new QuizChoiceLite(
-                quizChoice.getId(),
-                quizChoice.getText()
-        );
-    }
-
-    public static QuizPlayView toPlayView(Quiz quiz) {
+    public static QuizPlayView toPlayView(Quiz quiz, List<QuizChoiceLite> choiceLites) {
         return new QuizPlayView(
                 quiz.getId(),
                 quiz.getOwner().getId(),
                 quiz.getQuestion(),
                 quiz.getDifficulty(),
                 AnswerPolicyDto.fromType(quiz.getAnswerPolicy()),
-                toChoiceLiteList(quiz.getChoices()),
+                choiceLites,
                 quiz.getCreatedAt(),
                 quiz.getUpdatedAt()
         );

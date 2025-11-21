@@ -6,6 +6,7 @@ import com.gj.dev_note.quiz.domain.Quiz;
 import com.gj.dev_note.quiz.domain.QuizChoice;
 import com.gj.dev_note.quiz.dto.QuizChoiceLite;
 import com.gj.dev_note.quiz.dto.QuizLite;
+import com.gj.dev_note.quiz.mapper.QuizChoiceMapper;
 import com.gj.dev_note.quiz.mapper.QuizMapper;
 import com.gj.dev_note.quiz.repository.QuizChoiceRepository;
 import com.gj.dev_note.quiz.repository.QuizRepository;
@@ -56,18 +57,10 @@ public class QuizQueryService {
 
             List<QuizChoice> chs = choicesByQuizId.getOrDefault(id, List.of());
             List<QuizChoiceLite> liteChoices = chs.stream()
-                    .map(c -> new QuizChoiceLite(c.getId(), c.getText()))
+                    .map(QuizChoiceMapper::toLite)
                     .toList();
 
-            out.add(new QuizLite(
-                    q.getId(),
-                    q.getOwner().getId(),
-                    q.getQuestion(),
-                    q.getDifficulty(),
-                    liteChoices,
-                    q.getCreatedAt(),
-                    q.getUpdatedAt()
-            ));
+            out.add(QuizMapper.toLite(q, liteChoices));
         }
         return out;
     }
@@ -79,7 +72,7 @@ public class QuizQueryService {
         if (!canRead(me, q)) throw Errors.forbidden("quiz를 읽을 권한이 없습니다.");
 
         List<QuizChoiceLite> LiteChoices = choiceRepo.findAllByQuizIdOrderByDisplayOrderAscIdAsc(quizId).stream()
-                .map(QuizMapper::toChoiceLite)
+                .map(QuizChoiceMapper::toLite)
                 .toList();
 
         return QuizMapper.toLite(q, LiteChoices);
